@@ -1,0 +1,11 @@
+syntax: glob
+.DS_Store
+**.pyc
+**.dat
+**.html
+**.tmproj
+**.pdf
+**.png
+**.jpeg
+**.jpg
+**.pkl # Ignore pickle files
