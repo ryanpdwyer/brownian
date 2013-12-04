@@ -27,12 +27,10 @@ from pint import UnitRegistry
 from uncertainties import correlated_values, ufloat
 
 u = UnitRegistry()
-
-
 k_B = 1.3806504e-23 * u.J / u.K
 
+
 class BrownianMotionFitter(object):
-    
     """This object fits Brownian motion position fluctuation, in order to
     calculate the spring constant of the cantilever, as well as the
     detector noise floor.
@@ -43,7 +41,7 @@ class BrownianMotionFitter(object):
 
     """
 
-    def __init__(self, f, PSD, T, estimates):
+    def __init__(self, f, PSD, T, estimates, n_avg):
         """
         f
             frequency (Hz)
@@ -58,6 +56,8 @@ class BrownianMotionFitter(object):
         self.f = f
         self.PSD_raw = PSD
         self.T = T * u.K
+        self.n_avg = n_avg
+        self.wgt = 1 / n_avg ** 0.5
 
         missing = [key for key in ['f_c', 'k_c', 'Q'] if key not in estimates]
         if len(missing) == 0:
@@ -77,10 +77,9 @@ class BrownianMotionFitter(object):
         self.PSD = self.PSD_raw / self.P_detector0_raw
         self.P_detector0 = 1
 
-
-    def calc_fit(self, f_min = 1e3, f_max = 1e5):
+    def calc_fit(self, f_min=1e3, f_max=1e5):
         """Fit the power spectrum data over the frequency range
-        f_min to f_min, using a 4 pass approach"""
+        f_min to f_min, using a 4 pass approach."""
         self.f_min = f_min
         self.f_max = f_max
 
@@ -91,14 +90,15 @@ class BrownianMotionFitter(object):
         self._guess_P_detector()
         self._scale_data()
 
-        f = self.f[mask]
-        PSD = self.PSD[mask]
+        f = self.fit_f = self.f[mask]
+        PSD = self.fit_PSD = self.PSD[mask]
 
         self.calc_initial_params()
 
         self._first_pass(f, PSD)
-    #    self._second_pass()
-    #    self._final_passes()
+        self._second_pass(f, PSD)
+        self._final_passes(f, PSD)
+        self._prepare_output()
 
     def calc_initial_params(self):
         f_c = self.estimates['f_c'] * u.Hz
@@ -118,24 +118,51 @@ class BrownianMotionFitter(object):
         self.popt1, self.pcov1.
         """
 
-        print self.initial_params
-
         def Pf_fixed_P_detector(f, P_x0, f_c, Q):
             return Pf(f, P_x0, f_c, Q, self.P_detector0)
 
         self.popt1, self.pcov1 = curve_fit(Pf_fixed_P_detector,
-                                            f, PSD,
-                                            p0=self.initial_params,
-                                            sigma=PSD * 0.1 # Make this real
-                                            )
-    def _second_pass(self):
-        pass
+                                           f, PSD,
+                                           p0=self.initial_params,
+                                           sigma=PSD*self.wgt
+                                           )
 
-    def _final_passes(self):
-        pass
+    def _second_pass(self, f, PSD):
+
+        f_c = self.popt1[1]
+
+        def Pf_fixed_f_c(f, P_x0, Q, P_detector):
+            return Pf(f, P_x0, f_c, Q, P_detector)
+
+        p0 = [self.popt1[0], self.popt1[2], self.P_detector0]
+        PSD_sigma = Pf_fixed_f_c(f, *p0) * self.wgt
+
+        self.popt2, self.pcov2 = curve_fit(Pf_fixed_f_c,
+                                           f, PSD,
+                                           p0=p0,
+                                           sigma=PSD_sigma  # Make this real)
+                                           )
+
+    def _final_passes(self, f, PSD):
+
+        popt1, popt2 = self.popt1, self.popt2
+        f_c = popt1[1]
+        p0 = [popt2[0], f_c, popt2[1], popt2[2]]
+        wgt = self.wgt
+        PSD_sigma = Pf(f, *p0) * wgt  # Make this real
+        self.popt, self.pcov, self.PSD_fit = iterate_fit(Pf, f, PSD,
+                                                         p0, PSD_sigma, wgt)
+        self.PSD_fit_raw = self.PSD_fit * self.P_detector0_raw
 
     def _prepare_output(self):
-        pass
+        f_c, k_c, Q = translate_fit_parameters(self.popt, self.pcov,
+                                               self.P_detector0_raw,
+                                               self.T)
+        self.reduced_residuals = ((self.PSD_fit - self.PSD[self.mask]) /
+                                  self.PSD_fit)
+        self.reduced_residuals_sorted = np.sort(self.reduced_residuals)
+        self.f_c, self.k_c, self.Q = f_c, k_c, Q
+
 
 def P_x0(f_c, k_c, Q, T=300*u.K):
     """Used to estimate an initial value for P_x0. Input values
@@ -161,31 +188,57 @@ def Pf(f, P_x0, f_c, Q, P_detector):
     P_detector
         The detector noise floor.
         """
-    return  (P_x0 * f_c**4 / 
-                    ((f**2 - f_c**2)**2 + f**2 * f_c**2 / Q**2)
-                                                             + P_detector)
+    return (P_x0 * f_c**4 /
+            ((f**2 - f_c**2)**2 + f**2 * f_c**2 / Q**2)
+            + P_detector)
 
-def translate_fit_parameters(popt, pcov, P_dectector0_raw, T=300*u.K):
+
+def translate_fit_parameters(popt, pcov, P_detector0_raw, T=300*u.K):
     """Take the fit parameters and covariances, and converts them to
     SI values and errors for f_c, k_c, Q."""
     popt_ = popt[:3]
-    perrs = pcov[:3,:3]
+    perrs = pcov[:3, :3]
     pvals = correlated_values(popt_, perrs)
     punits = [u.nm**2 / u.Hz, u.Hz, u.dimensionless, u.nm**2 / u.Hz]
     scales = [P_detector0_raw, 1, 1]
 
     P_x0, f_c, Q = [uncert_val * unit * scale for
                     uncert_val, unit, scale in
-                                zip(pvals, punits, scales)]
+                    zip(pvals, punits, scales)]
 
     k_c = calc_k_c(f_c, Q, P_x0, T)
     return f_c, k_c, Q
 
 
-def calc_k_c(f_c, Q, P_x0, T=ufloat(300,1)*u.K):
+def calc_k_c(f_c, Q, P_x0, T=ufloat(300, 1)*u.K):
     """Calculate the spring constant, returning a pint quantity containing
-    a value with uncertainty (ufloat)."""
+    a value with uncertainty, if uncertainty is used on the input (ufloat)."""
     return ((2 * k_B * T) / (np.pi * f_c * Q * P_x0)).ito(u.N / u.m)
 
+
 def calc_P_x0(f_c, Q, k_c, T):
+    """Calculate the thermal noise floor, returning a pint quantity in
+    units of nm^2 / Hz."""
     return ((2 * k_B * T) / (np.pi * f_c * Q * k_c)).ito(u.nm ** 2 / u.Hz)
+
+
+def iterate_fit(func, x, y, p0, sigma_i, wgt):
+    popt = [[]]
+    pcov = [[]]
+    popt[0], pcov[0] = curve_fit(func, x, y, p0=p0, sigma=sigma_i)
+    for i in xrange(10):
+        new_sigma = wgt * func(x, *popt[-1])
+        opt, cov = curve_fit(func, x, y, p0=popt[-1], sigma=new_sigma)
+        popt.append(opt)
+        pcov.append(cov)
+    PSD_fit = func(x, *popt[-1])
+    return popt[-1], pcov[-1], PSD_fit
+
+
+def average_data(data, axis=0):
+    """Average the data along the given dimension, and calculate the 95
+    percent confidence interval. Return the avg, ci arrays."""
+    data_avg = data.mean(axis=axis)
+    data_std = data.std(axis=axis, ddof=1)
+    data_ci = data_std / data.shape[axis]**0.5 * 1.96
+    return data_avg, data_ci
