@@ -15,6 +15,7 @@ numpy
 scipy
 matplotlib
 pint
+pandas
 pytables
 
 """
@@ -26,8 +27,8 @@ import matplotlib as mpl
 # Backend should be set correctly here.
 from pint import UnitRegistry
 from uncertainties import correlated_values, ufloat
-import tables
-
+import pandas as pd
+ 
 u = UnitRegistry()
 k_B = 1.3806504e-23 * u.J / u.K
 
@@ -263,17 +264,13 @@ def get_data(filename):
 
     See http://h5labview.sourceforge.net and http://pytables.github.io for
     more information."""
-    fh = tables.openFile(filename)
+    fh = pd.HDFStore(filename, 'r')
 
-    f = np.array([i for i in fh.root.f])
-    f.ravel()  # Fix f to be a 1D arary, rather than N by 1
+    f = fh.root.f.read()
     
-    psds = [i for i in fh.walkNodes(where='/PSD') if type(i) == tables.Array]
-    PSD = np.empty([f.size, len(psds)])
-    for i, psd in enumerate(psds):
-        np_psd = np.array(psd)
-        np_psd.ravel()
-        PSD[:,i] = np_psd
+    PSD = np.empty([f.size, len(fh.root.PSD._v_children.values())])
+    for i, psd in enumerate(fh.root.PSD._v_children.values()):
+        PSD[:,i] = psd.read()
     
     fh.close()
 
