@@ -15,6 +15,7 @@ numpy
 scipy
 matplotlib
 pint
+pytables
 
 """
 
@@ -25,6 +26,7 @@ import matplotlib as mpl
 # Backend should be set correctly here.
 from pint import UnitRegistry
 from uncertainties import correlated_values, ufloat
+import tables
 
 u = UnitRegistry()
 k_B = 1.3806504e-23 * u.J / u.K
@@ -242,3 +244,39 @@ def average_data(data, axis=0):
     data_std = data.std(axis=axis, ddof=1)
     data_ci = data_std / data.shape[axis]**0.5 * 1.96
     return data_avg, data_ci
+
+def get_data(filename):
+    """Extract power spectrum data from an HDF5 file.
+    Return f, PSD_mean, PSD_conf_int.
+
+    The HDF file should have the following structure:
+
+    f
+        A table containing the frequencies of each point in the power
+        spectrum.
+
+    PSD/
+        A group containing the power spectrum data in datafiles within. The
+        datafiles within are typically named d001, d002, etc, but the specific
+        name does not matter as long as it is in the PSD group.
+
+
+    See http://h5labview.sourceforge.net and http://pytables.github.io for
+    more information."""
+    fh = tables.openFile(filename)
+
+    f = np.array([i for i in fh.root.f])
+    f.ravel()  # Fix f to be a 1D arary, rather than N by 1
+    
+    psds = [i for i in fh.walkNodes(where='/PSD') if type(i) == tables.Array]
+    PSD = np.empty([f.size, len(psds)])
+    for i, psd in enumerate(psds):
+        np_psd = np.array(psd)
+        np_psd.ravel()
+        PSD[:,i] = np_psd
+    
+    fh.close()
+
+    PSD_mean, PSD_ci = average_data(PSD, axis=1)
+
+    return f, PSD_mean, PSD_ci

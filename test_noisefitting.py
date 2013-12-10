@@ -1,5 +1,5 @@
 from noisefitting import (BrownianMotionFitter, u, calc_k_c,
-                          translate_fit_parameters, average_data)
+                          translate_fit_parameters, average_data, get_data)
 import pandas as pd
 import numpy as np
 import os
@@ -117,7 +117,22 @@ def test_average_data():
                      [1.2, 2.4, 4., 5.7],
                      [1.3, 2.7, 3.8, 4.7]])
     ex_avg = np.array([1.2, 2.55, 3.9125, 5.2])
-    ex_std = np.array([0.08001666, 0.16974098, 0.08368343, 0.43090293])
-    avg, std = average_data(data)
+    ex_ci = np.array([0.08001666, 0.16974098, 0.08368343, 0.43090293])
+    avg, ci = average_data(data)
     assert_array_almost_equal(ex_avg, avg)
-    assert_array_almost_equal(ex_std, std)
+    assert_array_almost_equal(ex_ci, ci)
+
+def test_get_data():
+    ex_f = np.array([1, 2, 3, 4, 5])
+    # ex_PSD = np.array([[1.1, 2.4, 3.95, 5., 5],
+    #                   [1.2, 2.7, 3.9, 5.4, 6],
+    #                   [1.2, 2.4, 4., 5.7, 6],
+    #                   [1.3, 2.7, 3.8, 4.7, 4]])
+    ex_mean = np.array([1.2, 2.55, 3.9125, 5.2, 5.25])
+    ex_ci = np.array([0.080016664930917122, 0.16974097914175013,
+                      0.083683431255336824, 0.43090292797024871,
+                      0.93827856560121137])
+    f, psd_mean, psd_ci = get_data('test.h5')
+    assert np.allclose(ex_f, f, 1e-4)
+    assert np.allclose(ex_mean, psd_mean)
+    assert np.allclose(ex_ci, psd_ci)
