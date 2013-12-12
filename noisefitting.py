@@ -24,6 +24,7 @@ pytables
 import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 # Backend should be set correctly here.
 from pint import UnitRegistry
 from uncertainties import correlated_values, ufloat
@@ -44,7 +45,7 @@ class BrownianMotionFitter(object):
 
     """
 
-    def __init__(self, f, PSD, T, estimates, n_avg):
+    def __init__(self, f, PSD, PSD_ci, T, estimates):
         """
         f
             frequency (Hz)
@@ -58,9 +59,9 @@ class BrownianMotionFitter(object):
         """
         self.f = f
         self.PSD_raw = PSD
+        self.PSD_ci_raw = PSD_ci
         self.T = T * u.K
-        self.n_avg = n_avg
-        self.wgt = 1 / n_avg ** 0.5
+
 
         missing = [key for key in ['f_c', 'k_c', 'Q'] if key not in estimates]
         if len(missing) == 0:
@@ -86,21 +87,21 @@ class BrownianMotionFitter(object):
         self.f_min = f_min
         self.f_max = f_max
 
-        mask_low = self.f < f_max
-        mask_high = self.f > f_min
-        self.mask = mask = np.logical_and(mask_high, mask_low)
+        self.mask = mask = make_mask(self.f, f_min, f_max)
 
         self._guess_P_detector()
         self._scale_data()
 
         f = self.fit_f = self.f[mask]
         PSD = self.fit_PSD = self.PSD[mask]
+        PSD_ci = self.PSD_ci = self.PSD_ci_raw[mask]
+        self.fit_PSD_raw = self.PSD_raw[mask]
 
         self.calc_initial_params()
 
-        self._first_pass(f, PSD)
-        self._second_pass(f, PSD)
-        self._final_passes(f, PSD)
+        self._first_pass(f, PSD, PSD_ci)
+        self._second_pass(f, PSD, PSD_ci)
+        self._final_pass(f, PSD, PSD_ci)
         self._prepare_output()
 
     def calc_initial_params(self):
@@ -113,7 +114,7 @@ class BrownianMotionFitter(object):
         
         self.initial_params = [P_x0guess.magnitude, f_c.magnitude, Q]
 
-    def _first_pass(self, f, PSD):
+    def _first_pass(self, f, PSD, PSD_ci):
         """The first pass of the fitting protocol. We use user input guesses
         for the three cantilever parameters, and fix the thermal noise floor
         to a low but reasonable guess. Then, we fit the remaining three
@@ -127,10 +128,10 @@ class BrownianMotionFitter(object):
         self.popt1, self.pcov1 = curve_fit(Pf_fixed_P_detector,
                                            f, PSD,
                                            p0=self.initial_params,
-                                           sigma=PSD*self.wgt
+                                           sigma=PSD_ci
                                            )
 
-    def _second_pass(self, f, PSD):
+    def _second_pass(self, f, PSD, PSD_ci):
 
         f_c = self.popt1[1]
 
@@ -138,33 +139,48 @@ class BrownianMotionFitter(object):
             return Pf(f, P_x0, f_c, Q, P_detector)
 
         p0 = [self.popt1[0], self.popt1[2], self.P_detector0]
-        PSD_sigma = Pf_fixed_f_c(f, *p0) * self.wgt
 
         self.popt2, self.pcov2 = curve_fit(Pf_fixed_f_c,
                                            f, PSD,
                                            p0=p0,
-                                           sigma=PSD_sigma  # Make this real)
+                                           sigma=PSD_ci
                                            )
 
-    def _final_passes(self, f, PSD):
+    def _final_pass(self, f, PSD, PSD_ci):
 
         popt1, popt2 = self.popt1, self.popt2
         f_c = popt1[1]
         p0 = [popt2[0], f_c, popt2[1], popt2[2]]
-        wgt = self.wgt
-        PSD_sigma = Pf(f, *p0) * wgt  # Make this real
-        self.popt, self.pcov, self.PSD_fit = iterate_fit(Pf, f, PSD,
-                                                         p0, PSD_sigma, wgt)
+        self.popt, self.pcov = curve_fit(Pf,
+                                           f, PSD,
+                                           p0=p0,
+                                           sigma=PSD_ci
+                                           )
+        self.PSD_fit = Pf(f, *self.popt)
         self.PSD_fit_raw = self.PSD_fit * self.P_detector0_raw
 
     def _prepare_output(self):
-        f_c, k_c, Q = translate_fit_parameters(self.popt, self.pcov,
+        f_c, k_c, Q, P_detector = translate_fit_parameters(self.popt, self.pcov,
                                                self.P_detector0_raw,
                                                self.T)
         self.reduced_residuals = ((self.PSD_fit - self.PSD[self.mask]) /
                                   self.PSD_fit)
         self.reduced_residuals_sorted = np.sort(self.reduced_residuals)
-        self.f_c, self.k_c, self.Q = f_c, k_c, Q
+        self.f_c, self.k_c, self.Q, self.P_detector = f_c, k_c, Q, P_detector
+
+    def print_output(self):
+        print("""
+    Resonence frequency f_c: {self.f_c:!p}
+    Spring constant k_c: {self.k_c:!p}
+    Quality Factor Q: {self.Q:!p}
+    Detector Noise: {self.P_detector}
+            """.format(self=self))
+
+    def plot_fit(self):
+        f = self.fit_f
+        plt.semilogy(f, self.fit_PSD_raw, f, self.PSD_fit_raw)
+        plt.xlim(self.f_min, self.f_max)
+        plt.show()
 
 
 def P_x0(f_c, k_c, Q, T=300*u.K):
@@ -196,21 +212,35 @@ def Pf(f, P_x0, f_c, Q, P_detector):
             + P_detector)
 
 
+def make_mask(f, f_min, f_max):
+    """Return a mask of the array f. The mask can be used
+    to give only elements of f between fmin and fmax.
+
+    Use the resulting mask to block off elements of f outside
+    of the specified bounds, as shown below.
+
+    >>> f = np.arange(10)
+    >>> mask = make_mask(f, 1.5, 5.5)
+    >>> f[mask]
+    array([2, 3, 4, 5])
+    """
+    mask_low = f < f_max
+    mask_high = f > f_min
+    return np.logical_and(mask_high, mask_low)
+
 def translate_fit_parameters(popt, pcov, P_detector0_raw, T=300*u.K):
     """Take the fit parameters and covariances, and converts them to
     SI values and errors for f_c, k_c, Q."""
-    popt_ = popt[:3]
-    perrs = pcov[:3, :3]
-    pvals = correlated_values(popt_, perrs)
+    pvals = correlated_values(popt, pcov)
     punits = [u.nm**2 / u.Hz, u.Hz, u.dimensionless, u.nm**2 / u.Hz]
-    scales = [P_detector0_raw, 1, 1]
+    scales = [P_detector0_raw, 1, 1, P_detector0_raw]
 
-    P_x0, f_c, Q = [uncert_val * unit * scale for
+    P_x0, f_c, Q, P_detector = [uncert_val * unit * scale for
                     uncert_val, unit, scale in
                     zip(pvals, punits, scales)]
 
     k_c = calc_k_c(f_c, Q, P_x0, T)
-    return f_c, k_c, Q
+    return f_c, k_c, Q, P_detector
 
 
 def calc_k_c(f_c, Q, P_x0, T=ufloat(300, 1)*u.K):
@@ -267,11 +297,11 @@ def get_data(filename):
     fh = pd.HDFStore(filename, 'r')
 
     f = fh.root.f.read()
-    
+
     PSD = np.empty([f.size, len(fh.root.PSD._v_children.values())])
     for i, psd in enumerate(fh.root.PSD._v_children.values()):
         PSD[:,i] = psd.read()
-    
+
     fh.close()
 
     PSD_mean, PSD_ci = average_data(PSD, axis=1)

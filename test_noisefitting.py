@@ -12,6 +12,7 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 data = pd.read_pickle('data.pkl')
 f = data.f.values
 PSDx = data.PSDx.values
+PSD_wgt = data.PSDx.values * 0.1
 estimates = {'f_c': 63700, 'k_c': 3.5, 'Q': 20000}
 T = 295
 
@@ -20,7 +21,9 @@ def test_BrownMotionFitter_init():
     # Try a case that should work.
     reduced_f = f[::25000]
     reduced_PSD = PSDx[::25000]
-    a = BrownianMotionFitter(reduced_f, reduced_PSD, T, estimates, 1)
+    reduced_PSD_wgt = reduced_PSD * 0.25
+    a = BrownianMotionFitter(reduced_f, reduced_PSD,
+                             reduced_PSD_wgt, T, estimates)
     assert np.all(a.f == reduced_f)
     assert np.all(a.PSD_raw == reduced_PSD)
     assert np.all(a.T == T * u.K)
@@ -28,14 +31,14 @@ def test_BrownMotionFitter_init():
     # Try a case that should fail.
     bad_estimates = {'f_c': 63700, 'k_c': 3.5}
     assert_raises(ValueError, BrownianMotionFitter,
-                            reduced_f, reduced_PSD, T, bad_estimates, 1)
+                            reduced_f, reduced_PSD, PSD_wgt, T, bad_estimates)
 
 
 ex_scaled_PSD = np.load('scale_data_PSD.npy')
 
 class testBrownianMotionFitter_fitting(unittest.TestCase):
     def setUp(self):
-        self.bmf = BrownianMotionFitter(f, PSDx, T, estimates, 1)
+        self.bmf = BrownianMotionFitter(f, PSDx, PSD_wgt, T, estimates)
 
     def test_guess_P_detector(self):
         self.bmf._guess_P_detector()
@@ -104,7 +107,8 @@ def test_translate_fit_parameters():
     T = ufloat(300, 3) * u.K
     ex_output = [ufloat(50000, 0.5) * u.Hz,
                  ufloat(3, 0.05196153288731964) * u.N/u.m,
-                 ufloat(10000, 100) * u.dimensionless]
+                 ufloat(10000, 100) * u.dimensionless,
+                 ufloat(1e-12, 1e-13) * u.nm ** 2 / u.Hz]
     output = translate_fit_parameters(popt, pcov, P_detector0_raw, T)
     for ex_i, i in zip(ex_output, output):
         assert_almost_equal(ex_i.magnitude.n, i.magnitude.n)
