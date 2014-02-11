@@ -9,3 +9,5 @@ syntax: glob
 **.jpeg
 **.jpg
 **.pkl # Ignore pickle files
+**.npy
+**.csv

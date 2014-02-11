@@ -31,10 +31,11 @@ def test_BrownMotionFitter_init():
     # Try a case that should fail.
     bad_estimates = {'f_c': 63700, 'k_c': 3.5}
     assert_raises(ValueError, BrownianMotionFitter,
-                            reduced_f, reduced_PSD, PSD_wgt, T, bad_estimates)
+                  reduced_f, reduced_PSD, PSD_wgt, T, bad_estimates)
 
 
 ex_scaled_PSD = np.load('scale_data_PSD.npy')
+
 
 class testBrownianMotionFitter_fitting(unittest.TestCase):
     def setUp(self):
@@ -61,12 +62,6 @@ class testBrownianMotionFitter_fitting(unittest.TestCase):
         np.testing.assert_allclose(ex_initial_params, self.bmf.initial_params)
 
 
-
-
-
-
-
-
 def test_first_pass():
     pass
 
@@ -77,6 +72,7 @@ def test_Px0():
 
 def test_Pf():
     pass
+
 
 def test_calc_k_c():
     """Test error calculation for calc_k_c.
@@ -125,6 +121,7 @@ def test_average_data():
     avg, ci = average_data(data)
     assert_array_almost_equal(ex_avg, avg)
     assert_array_almost_equal(ex_ci, ci)
+
 
 def test_get_data():
     ex_f = np.array([1, 2, 3, 4, 5])

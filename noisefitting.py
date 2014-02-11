@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 from pint import UnitRegistry
 from uncertainties import correlated_values, ufloat
 import pandas as pd
- 
+
 u = UnitRegistry()
 k_B = 1.3806504e-23 * u.J / u.K
 
@@ -109,9 +109,9 @@ class BrownianMotionFitter(object):
         k_c = self.estimates['k_c'] * u.N / u.m
         Q = self.estimates['Q']
 
-        P_x0guess = (P_x0(f_c, k_c, Q, self.T) / 
-                            (self.P_detector0_raw * u.nm ** 2 / u.Hz))
-        
+        P_x0guess = (P_x0(f_c, k_c, Q, self.T) /
+                    (self.P_detector0_raw * u.nm ** 2 / u.Hz))
+
         self.initial_params = [P_x0guess.magnitude, f_c.magnitude, Q]
 
     def _first_pass(self, f, PSD, PSD_ci):
@@ -152,17 +152,15 @@ class BrownianMotionFitter(object):
         f_c = popt1[1]
         p0 = [popt2[0], f_c, popt2[1], popt2[2]]
         self.popt, self.pcov = curve_fit(Pf,
-                                           f, PSD,
-                                           p0=p0,
-                                           sigma=PSD_ci
-                                           )
+                                         f, PSD,
+                                         p0=p0,
+                                         sigma=PSD_ci)
         self.PSD_fit = Pf(f, *self.popt)
         self.PSD_fit_raw = self.PSD_fit * self.P_detector0_raw
 
     def _prepare_output(self):
-        f_c, k_c, Q, P_detector = translate_fit_parameters(self.popt, self.pcov,
-                                               self.P_detector0_raw,
-                                               self.T)
+        f_c, k_c, Q, P_detector = translate_fit_parameters(
+            self.popt, self.pcov, self.P_detector0_raw, self.T)
         self.reduced_residuals = ((self.PSD_fit - self.PSD[self.mask]) /
                                   self.PSD_fit)
         self.reduced_residuals_sorted = np.sort(self.reduced_residuals)
@@ -228,6 +226,7 @@ def make_mask(f, f_min, f_max):
     mask_high = f > f_min
     return np.logical_and(mask_high, mask_low)
 
+
 def translate_fit_parameters(popt, pcov, P_detector0_raw, T=300*u.K):
     """Take the fit parameters and covariances, and converts them to
     SI values and errors for f_c, k_c, Q."""
@@ -236,8 +235,8 @@ def translate_fit_parameters(popt, pcov, P_detector0_raw, T=300*u.K):
     scales = [P_detector0_raw, 1, 1, P_detector0_raw]
 
     P_x0, f_c, Q, P_detector = [uncert_val * unit * scale for
-                    uncert_val, unit, scale in
-                    zip(pvals, punits, scales)]
+                                uncert_val, unit, scale in
+                                zip(pvals, punits, scales)]
 
     k_c = calc_k_c(f_c, Q, P_x0, T)
     return f_c, k_c, Q, P_detector
@@ -276,6 +275,7 @@ def average_data(data, axis=0):
     data_ci = data_std / data.shape[axis]**0.5 * 1.96
     return data_avg, data_ci
 
+
 def get_data(filename):
     """Extract power spectrum data from an HDF5 file.
     Return f, PSD_mean, PSD_conf_int.
@@ -300,7 +300,7 @@ def get_data(filename):
 
     PSD = np.empty([f.size, len(fh.root.PSD._v_children.values())])
     for i, psd in enumerate(fh.root.PSD._v_children.values()):
-        PSD[:,i] = psd.read()
+        PSD[:, i] = psd.read()
 
     fh.close()
 
