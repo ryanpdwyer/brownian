@@ -1,5 +1,6 @@
 from noisefitting import (BrownianMotionFitter, u, calc_k_c,
-                          translate_fit_parameters, average_data, get_data)
+                          translate_fit_parameters, average_data, get_data,
+                          fit_residuals)
 import pandas as pd
 import numpy as np
 import os
@@ -14,8 +15,8 @@ data = pd.read_pickle('data.pkl')
 f = data.f.values
 PSDx = data.PSDx.values
 PSD_wgt = data.PSDx.values * 0.1
-est_cant = SUCantilever(f_c=63700*u.Hz,k_c=3.5*u.N/u.m,
-                          Q=20000*u.dimensionless)
+est_cant = SUCantilever(f_c=63700*u.Hz, k_c=3.5*u.N/u.m,
+                        Q=20000*u.dimensionless)
 T = 295
 
 
@@ -141,3 +142,10 @@ def test_get_data():
     assert np.allclose(ex_f, f, 1e-4)
     assert np.allclose(ex_mean, psd_mean)
     assert np.allclose(ex_ci, psd_ci)
+
+
+def test_fit_residuals():
+    sorted_normal = np.load('normal-residuals.npy')  # Load normal residuals
+    loc, scale = fit_residuals(sorted_normal)
+    assert_almost_equal(loc, 0, places=2)
+    assert_almost_equal(scale, 1, places=2)

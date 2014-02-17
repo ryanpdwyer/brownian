@@ -20,8 +20,10 @@ pytables
 
 """
 
-
+from __future__ import division
 import numpy as np
+import scipy
+import scipy.stats
 from scipy.optimize import curve_fit
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -193,7 +195,9 @@ class BrownianMotionFitter(object):
         plt.show()
 
     def fit_residuals(self):
-        pass
+        self.p_residuals = fit_residuals(self.reduced_residuals_sorted)
+        print("""The residuals have mean {self.p_residuals[0]:.2e}
+and standard deviation {self.p_residuals[1]:.2e}""".format(self=self))
 
 
 def P_x0(f_c, k_c, Q, T=300*u.K):
@@ -323,3 +327,17 @@ def get_data(filename):
     PSD_mean, PSD_ci = average_data(PSD, axis=1)
 
     return f, PSD_mean, PSD_ci
+
+
+def fit_residuals(sorted_residuals):
+    """Return the result of fitting the residuals to the normal cdf.
+    """
+    size = sorted_residuals.size
+    y = np.arange(1, 1 + size) / size
+
+    def cdf(x, loc, scale):
+        return scipy.stats.norm.cdf(x, loc=loc, scale=scale)
+
+    popt, _ = curve_fit(cdf, sorted_residuals, y)
+
+    return popt
