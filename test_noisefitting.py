@@ -17,21 +17,27 @@ estimates = {'f_c': 63700, 'k_c': 3.5, 'Q': 20000}
 T = 295
 
 
-def test_BrownMotionFitter_init():
-    # Try a case that should work.
-    reduced_f = f[::25000]
-    reduced_PSD = PSDx[::25000]
-    reduced_PSD_wgt = reduced_PSD * 0.25
-    a = BrownianMotionFitter(reduced_f, reduced_PSD,
-                             reduced_PSD_wgt, T, estimates)
-    assert np.all(a.f == reduced_f)
-    assert np.all(a.PSD_raw == reduced_PSD)
-    assert np.all(a.T == T * u.K)
-    assert a.estimates == estimates
-    # Try a case that should fail.
-    bad_estimates = {'f_c': 63700, 'k_c': 3.5}
-    assert_raises(ValueError, BrownianMotionFitter,
-                  reduced_f, reduced_PSD, PSD_wgt, T, bad_estimates)
+class testBrownianMotionFitter_init(unittest.TestCase):
+    """Test the initialization of the BrownianMotionFitter"""
+    def setUp(self):
+        self.reduced_f = f[::25000]
+        self.reduced_PSD = PSDx[::25000]
+        self.reduced_PSD_wgt = self.reduced_PSD * 0.25
+
+    def test_BrownMotionFitter_init_success(self):
+        # Try a case that should work.
+
+        a = BrownianMotionFitter(self.reduced_f, self.reduced_PSD,
+                                 self.reduced_PSD_wgt, T, estimates)
+        assert np.all(a.f == self.reduced_f)
+        assert np.all(a.PSD_raw == self.reduced_PSD)
+        assert np.all(a.T == T * u.K)
+        assert a.estimates == estimates
+
+    def test_BrownianMotionFitting_init_fail(self):
+        bad_estimates = {'f_c': 63700, 'k_c': 3.5}
+        assert_raises(ValueError, BrownianMotionFitter, self.reduced_f,
+                      self.reduced_PSD, self.reduced_PSD_wgt, T, bad_estimates)
 
 
 ex_scaled_PSD = np.load('scale_data_PSD.npy')

@@ -35,14 +35,9 @@ k_B = 1.3806504e-23 * u.J / u.K
 
 
 class BrownianMotionFitter(object):
-    """This object fits Brownian motion position fluctuation, in order to
-    calculate the spring constant of the cantilever, as well as the
+    """This object fits Brownian motion position fluctuation data to
+    calculate the spring constant of the cantilever and the
     detector noise floor.
-
-
-
-    estimates is a dictionary of 
-
     """
 
     def __init__(self, f, PSD, PSD_ci, T, estimates):
@@ -53,8 +48,15 @@ class BrownianMotionFitter(object):
         PSD
             Power spectral density of position fluctuations (nm^2 / Hz)
 
+        PSD_ci
+            The confidence intervals corresponding to the PSD data (nm^2 / Hz)
+
+        T
+            temperature (K)
+
         estimates
-            A dictionary containing initial estimates of f_c, k_c, and Q.
+            A dictionary containing initial estimates of :math:`f_c, k_c,`
+            and Q.
 
         """
         self.f = f
@@ -62,7 +64,7 @@ class BrownianMotionFitter(object):
         self.PSD_ci_raw = PSD_ci
         self.T = T * u.K
 
-
+        # Check the estimates dictionary for missing keys
         missing = [key for key in ['f_c', 'k_c', 'Q'] if key not in estimates]
         if len(missing) == 0:
             self.estimates = estimates
@@ -105,6 +107,8 @@ class BrownianMotionFitter(object):
         self._prepare_output()
 
     def calc_initial_params(self):
+        """Use the estimates to calculate initial parameters to use for
+        the fitting functions."""
         f_c = self.estimates['f_c'] * u.Hz
         k_c = self.estimates['k_c'] * u.N / u.m
         Q = self.estimates['Q']
@@ -115,11 +119,13 @@ class BrownianMotionFitter(object):
         self.initial_params = [P_x0guess.magnitude, f_c.magnitude, Q]
 
     def _first_pass(self, f, PSD, PSD_ci):
-        """The first pass of the fitting protocol. We use user input guesses
-        for the three cantilever parameters, and fix the thermal noise floor
-        to a low but reasonable guess. Then, we fit the remaining three
-        parameters (P_x0, f_c, Q). The output of this fit is saved to
+        """Fit the power spectrum data using initial guesses for the
+        parameters and a fixed noise floor. Fitting outputs stored in
         self.popt1, self.pcov1.
+
+        We use user input guesses for the three cantilever parameters,
+        and fix the thermal noise floor to a low but reasonable guess.
+        Then, we fit the remaining three parameters :math:`P_{x0}, f_c, Q`.
         """
 
         def Pf_fixed_P_detector(f, P_x0, f_c, Q):
@@ -128,11 +134,11 @@ class BrownianMotionFitter(object):
         self.popt1, self.pcov1 = curve_fit(Pf_fixed_P_detector,
                                            f, PSD,
                                            p0=self.initial_params,
-                                           sigma=PSD_ci
-                                           )
+                                           sigma=PSD_ci)
 
     def _second_pass(self, f, PSD, PSD_ci):
-
+        """Fit the power spectrum holding the center frequency :math:`f_c`
+        fixed. Fitting outputs stored in self.popt2, self.pcov2."""
         f_c = self.popt1[1]
 
         def Pf_fixed_f_c(f, P_x0, Q, P_detector):
@@ -143,11 +149,10 @@ class BrownianMotionFitter(object):
         self.popt2, self.pcov2 = curve_fit(Pf_fixed_f_c,
                                            f, PSD,
                                            p0=p0,
-                                           sigma=PSD_ci
-                                           )
+                                           sigma=PSD_ci)
 
     def _final_pass(self, f, PSD, PSD_ci):
-
+        """Fit the power spectrum allowing """
         popt1, popt2 = self.popt1, self.popt2
         f_c = popt1[1]
         p0 = [popt2[0], f_c, popt2[1], popt2[2]]
@@ -175,10 +180,15 @@ class BrownianMotionFitter(object):
             """.format(self=self))
 
     def plot_fit(self):
+        """Plot the calculated fit."""
         f = self.fit_f
         plt.semilogy(f, self.fit_PSD_raw, f, self.PSD_fit_raw)
         plt.xlim(self.f_min, self.f_max)
         plt.show()
+
+    def plot_residuals(self):
+        """Plot the residuals of the calculated fit."""
+        pass
 
 
 def P_x0(f_c, k_c, Q, T=300*u.K):
@@ -188,7 +198,8 @@ def P_x0(f_c, k_c, Q, T=300*u.K):
 
 
 def Pf(f, P_x0, f_c, Q, P_detector):
-    """
+    """The equation to calculate :math:`P_x(f)` from the cantilever
+    parameters and detector noise floor.
 
     f
         Frequency, the independent variable.
