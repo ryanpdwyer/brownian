@@ -29,8 +29,8 @@ import matplotlib.pyplot as plt
 from pint import UnitRegistry
 from uncertainties import correlated_values, ufloat
 import pandas as pd
+from jittermodel.ubase import u
 
-u = UnitRegistry()
 k_B = 1.3806504e-23 * u.J / u.K
 
 
@@ -40,7 +40,7 @@ class BrownianMotionFitter(object):
     detector noise floor.
     """
 
-    def __init__(self, f, PSD, PSD_ci, T, estimates):
+    def __init__(self, f, PSD, PSD_ci, T, est_cant):
         """
         f
             frequency (Hz)
@@ -54,23 +54,15 @@ class BrownianMotionFitter(object):
         T
             temperature (K)
 
-        estimates
-            A dictionary containing initial estimates of :math:`f_c, k_c,`
-            and Q.
+        est_cant
+            A unitted cantilever.
 
         """
         self.f = f
         self.PSD_raw = PSD
         self.PSD_ci_raw = PSD_ci
         self.T = T * u.K
-
-        # Check the estimates dictionary for missing keys
-        missing = [key for key in ['f_c', 'k_c', 'Q'] if key not in estimates]
-        if len(missing) == 0:
-            self.estimates = estimates
-        else:
-            raise ValueError("The dictionary 'estimates' is missing keys:\
-                                            {missing}".format(missing=missing))
+        self.est_cant = est_cant
 
     def _guess_P_detector(self):
         """Guess a low, but reasonable number for the detector noise floor.
@@ -109,9 +101,9 @@ class BrownianMotionFitter(object):
     def calc_initial_params(self):
         """Use the estimates to calculate initial parameters to use for
         the fitting functions."""
-        f_c = self.estimates['f_c'] * u.Hz
-        k_c = self.estimates['k_c'] * u.N / u.m
-        Q = self.estimates['Q']
+        f_c = self.est_cant.f_c
+        k_c = self.est_cant.k_c
+        Q = self.est_cant.Q
 
         P_x0guess = (P_x0(f_c, k_c, Q, self.T) /
                     (self.P_detector0_raw * u.nm ** 2 / u.Hz))
@@ -152,7 +144,12 @@ class BrownianMotionFitter(object):
                                            sigma=PSD_ci)
 
     def _final_pass(self, f, PSD, PSD_ci):
-        """Fit the power spectrum allowing """
+        """Fit the power spectrum allowing all parameters to
+        determined by the fitting algorithm. Fitting outputs stored to
+        self.popt, self.pcov.
+
+        The fit data and raw fit data is stored to self.PSD_fit,
+        self.PSD_fit_raw."""
         popt1, popt2 = self.popt1, self.popt2
         f_c = popt1[1]
         p0 = [popt2[0], f_c, popt2[1], popt2[2]]
@@ -166,8 +163,8 @@ class BrownianMotionFitter(object):
     def _prepare_output(self):
         f_c, k_c, Q, P_detector = translate_fit_parameters(
             self.popt, self.pcov, self.P_detector0_raw, self.T)
-        self.reduced_residuals = ((self.PSD_fit - self.PSD[self.mask]) /
-                                  self.PSD_fit)
+        self.residuals = (self.PSD_fit - self.PSD[self.mask])
+        self.reduced_residuals = self.residuals / self.PSD_fit
         self.reduced_residuals_sorted = np.sort(self.reduced_residuals)
         self.f_c, self.k_c, self.Q, self.P_detector = f_c, k_c, Q, P_detector
 
@@ -188,12 +185,20 @@ class BrownianMotionFitter(object):
 
     def plot_residuals(self):
         """Plot the residuals of the calculated fit."""
+        plt.plot(self.fit_f, self.residuals)
+        plt.show()
+
+    def plot_reduced_residuals(self):
+        plt.plot(self.fit_f, self.reduced_residuals)
+        plt.show()
+
+    def fit_residuals(self):
         pass
 
 
 def P_x0(f_c, k_c, Q, T=300*u.K):
     """Used to estimate an initial value for P_x0. Input values
-    using Pint for units."""
+    using int for units."""
     return (2 * k_B * T / (np.pi * k_c * Q * f_c)).ito(u.nm ** 2 / u.Hz)
 
 

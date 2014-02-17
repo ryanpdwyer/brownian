@@ -7,13 +7,15 @@ from nose.tools import assert_raises, assert_almost_equal
 import unittest
 from uncertainties import ufloat
 from numpy.testing import assert_array_almost_equal
+from jittermodel.ubase import SUCantilever
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 data = pd.read_pickle('data.pkl')
 f = data.f.values
 PSDx = data.PSDx.values
 PSD_wgt = data.PSDx.values * 0.1
-estimates = {'f_c': 63700, 'k_c': 3.5, 'Q': 20000}
+est_cant = SUCantilever(f_c=63700*u.Hz,k_c=3.5*u.N/u.m,
+                          Q=20000*u.dimensionless)
 T = 295
 
 
@@ -28,16 +30,11 @@ class testBrownianMotionFitter_init(unittest.TestCase):
         # Try a case that should work.
 
         a = BrownianMotionFitter(self.reduced_f, self.reduced_PSD,
-                                 self.reduced_PSD_wgt, T, estimates)
+                                 self.reduced_PSD_wgt, T, est_cant)
         assert np.all(a.f == self.reduced_f)
         assert np.all(a.PSD_raw == self.reduced_PSD)
         assert np.all(a.T == T * u.K)
-        assert a.estimates == estimates
-
-    def test_BrownianMotionFitting_init_fail(self):
-        bad_estimates = {'f_c': 63700, 'k_c': 3.5}
-        assert_raises(ValueError, BrownianMotionFitter, self.reduced_f,
-                      self.reduced_PSD, self.reduced_PSD_wgt, T, bad_estimates)
+        assert a.est_cant == est_cant
 
 
 ex_scaled_PSD = np.load('scale_data_PSD.npy')
@@ -45,7 +42,7 @@ ex_scaled_PSD = np.load('scale_data_PSD.npy')
 
 class testBrownianMotionFitter_fitting(unittest.TestCase):
     def setUp(self):
-        self.bmf = BrownianMotionFitter(f, PSDx, PSD_wgt, T, estimates)
+        self.bmf = BrownianMotionFitter(f, PSDx, PSD_wgt, T, est_cant)
 
     def test_guess_P_detector(self):
         self.bmf._guess_P_detector()
@@ -66,6 +63,7 @@ class testBrownianMotionFitter_fitting(unittest.TestCase):
         ex_initial_params = [8.9173850434295625e-05, 63700, 20000]
 
         np.testing.assert_allclose(ex_initial_params, self.bmf.initial_params)
+
 
 
 def test_first_pass():
