@@ -32,6 +32,7 @@ from pint import UnitRegistry
 from uncertainties import correlated_values, ufloat
 import pandas as pd
 from jittermodel.ubase import u
+from jittermodel.ubase import UnitCantilever
 
 k_B = 1.3806504e-23 * u.J / u.K
 
@@ -103,9 +104,9 @@ class BrownianMotionFitter(object):
     def calc_initial_params(self):
         """Use the estimates to calculate initial parameters to use for
         the fitting functions."""
-        f_c = self.est_cant.f_c
-        k_c = self.est_cant.k_c
-        Q = self.est_cant.Q
+        f_c = self.est_cant.f_c.to(u.Hz)
+        k_c = self.est_cant.k_c.to(u.N/u.m)
+        Q = self.est_cant.Q.magnitude
 
         P_x0guess = (P_x0(f_c, k_c, Q, self.T) /
                     (self.P_detector0_raw * u.nm ** 2 / u.Hz))

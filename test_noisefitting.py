@@ -8,14 +8,14 @@ from nose.tools import assert_raises, assert_almost_equal
 import unittest
 from uncertainties import ufloat
 from numpy.testing import assert_array_almost_equal
-from jittermodel.ubase import SUCantilever
+from jittermodel.ubase import UnitCantilever
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 data = pd.read_pickle('data.pkl')
 f = data.f.values
 PSDx = data.PSDx.values
 PSD_wgt = data.PSDx.values * 0.1
-est_cant = SUCantilever(f_c=63700*u.Hz, k_c=3.5*u.N/u.m,
+est_cant = UnitCantilever(f_c=63700*u.Hz, k_c=3.5*u.N/u.m,
                         Q=20000*u.dimensionless)
 T = 295
 
