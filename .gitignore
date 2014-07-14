@@ -1,4 +1,3 @@
-syntax: glob
 .DS_Store
 **.pyc
 **.dat
@@ -8,6 +7,5 @@ syntax: glob
 **.png
 **.jpeg
 **.jpg
-**.pkl # Ignore pickle files
+**.pkl
 **.npy
-**.csv
