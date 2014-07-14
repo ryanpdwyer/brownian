@@ -1,4 +1,4 @@
-from noisefitting import (BrownianMotionFitter, u, calc_k_c,
+from brownian import (BrownianMotionFitter, u, calc_k_c,
                           translate_fit_parameters, average_data, get_data,
                           fit_residuals)
 import pandas as pd
@@ -39,7 +39,6 @@ class testBrownianMotionFitter_init(unittest.TestCase):
 
 
 ex_scaled_PSD = np.load('scale_data_PSD.npy')
-
 
 class testBrownianMotionFitter_fitting(unittest.TestCase):
     def setUp(self):
@@ -88,6 +87,7 @@ def test_calc_k_c():
     f_c: 1e-5
     Q: 0.01
     T: 0.01"""
+    
     P_x0 = ufloat(1.75789868673e-12, 1.75789868673e-14) * u.nm**2/u.Hz  # 1/100
     f_c = ufloat(50000, 0.5) * u.Hz  # 1/100000 relative
     Q = ufloat(10000, 100) * u.dimensionless  # 1/100

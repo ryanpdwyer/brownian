@@ -28,9 +28,8 @@ from scipy.optimize import curve_fit
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 # Backend should be set correctly here.
-from pint import UnitRegistry
 from uncertainties import correlated_values, ufloat
-import pandas as pd
+import h5py
 from jittermodel.ubase import u
 from jittermodel.ubase import UnitCantilever
 
@@ -80,7 +79,7 @@ class BrownianMotionFitter(object):
 
     def calc_fit(self, f_min=1e3, f_max=1e5):
         """Fit the power spectrum data over the frequency range
-        f_min to f_min, using a 4 pass approach."""
+        f_min to f_min, using a 3 pass approach."""
         self.f_min = f_min
         self.f_max = f_max
 
@@ -108,7 +107,7 @@ class BrownianMotionFitter(object):
         k_c = self.est_cant.k_c.to(u.N/u.m)
         Q = self.est_cant.Q.magnitude
 
-        P_x0guess = (P_x0(f_c, k_c, Q, self.T) /
+        P_x0guess = (calc_P_x0(f_c, k_c, Q, self.T) /
                     (self.P_detector0_raw * u.nm ** 2 / u.Hz))
 
         self.initial_params = [P_x0guess.magnitude, f_c.magnitude, Q]
@@ -201,12 +200,6 @@ class BrownianMotionFitter(object):
 and standard deviation {self.p_residuals[1]:.2e}""".format(self=self))
 
 
-def P_x0(f_c, k_c, Q, T=300*u.K):
-    """Used to estimate an initial value for P_x0. Input values
-    using int for units."""
-    return (2 * k_B * T / (np.pi * k_c * Q * f_c)).ito(u.nm ** 2 / u.Hz)
-
-
 def Pf(f, P_x0, f_c, Q, P_detector):
     """The equation to calculate :math:`P_x(f)` from the cantilever
     parameters and detector noise floor.
@@ -266,13 +259,13 @@ def translate_fit_parameters(popt, pcov, P_detector0_raw, T=300*u.K):
 def calc_k_c(f_c, Q, P_x0, T=ufloat(300, 1)*u.K):
     """Calculate the spring constant, returning a pint quantity containing
     a value with uncertainty, if uncertainty is used on the input (ufloat)."""
-    return ((2 * k_B * T) / (np.pi * f_c * Q * P_x0)).ito(u.N / u.m)
+    return ((2 * k_B * T) / (np.pi * f_c * Q * P_x0)).to(u.N / u.m)
 
 
 def calc_P_x0(f_c, Q, k_c, T):
     """Calculate the thermal noise floor, returning a pint quantity in
     units of nm^2 / Hz."""
-    return ((2 * k_B * T) / (np.pi * f_c * Q * k_c)).ito(u.nm ** 2 / u.Hz)
+    return ((2 * k_B * T) / (np.pi * f_c * Q * k_c)).to(u.nm ** 2 / u.Hz)
 
 
 def iterate_fit(func, x, y, p0, sigma_i, wgt):
@@ -315,13 +308,15 @@ def get_data(filename):
 
     See http://h5labview.sourceforge.net and http://pytables.github.io for
     more information."""
-    fh = pd.HDFStore(filename, 'r')
+    fh = h5py.File(filename, 'r')
 
-    f = fh.root.f.read()
+    psd_group = fh.get('PSD')
 
-    PSD = np.empty([f.size, len(fh.root.PSD._v_children.values())])
-    for i, psd in enumerate(fh.root.PSD._v_children.values()):
-        PSD[:, i] = psd.read()
+    f = fh['f'].value
+
+    PSD = np.empty([psd_group.values()[0].size, len(psd_group)])
+    for i, psd in enumerate(psd_group.values()):
+        PSD[:, i] = psd.value
 
     fh.close()
 

@@ -4,5 +4,6 @@ setup(name='noisefitting',
       description="",
       version="0.1dev",
       install_requires=[
-      'numpy', 'scipy', 'matplotlib', 'pint', 'pandas', 'nose'
+      'numpy', 'scipy', 'matplotlib', 'pint',
+      'nose', 'cython', 'h5py'
       ])
