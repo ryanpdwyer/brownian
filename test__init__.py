@@ -87,7 +87,7 @@ def test_calc_k_c():
     f_c: 1e-5
     Q: 0.01
     T: 0.01"""
-    
+
     P_x0 = ufloat(1.75789868673e-12, 1.75789868673e-14) * u.nm**2/u.Hz  # 1/100
     f_c = ufloat(50000, 0.5) * u.Hz  # 1/100000 relative
     Q = ufloat(10000, 100) * u.dimensionless  # 1/100
@@ -139,7 +139,7 @@ def test_get_data():
                       0.083683431255336824, 0.43090292797024871,
                       0.93827856560121137])
     f, psd_mean, psd_ci = get_data('test.h5')
-    assert np.allclose(ex_f, f, 1e-4)
+    assert np.allclose(ex_f, f)
     assert np.allclose(ex_mean, psd_mean)
     assert np.allclose(ex_ci, psd_ci)
 

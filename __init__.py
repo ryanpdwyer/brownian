@@ -310,17 +310,10 @@ def get_data(filename):
     more information."""
     fh = h5py.File(filename, 'r')
 
-    psd_group = fh.get('PSD')
-
     f = fh['f'].value
+    PSD = fh['PSD'].value
 
-    PSD = np.empty([psd_group.values()[0].size, len(psd_group)])
-    for i, psd in enumerate(psd_group.values()):
-        PSD[:, i] = psd.value
-
-    fh.close()
-
-    PSD_mean, PSD_ci = average_data(PSD, axis=1)
+    PSD_mean, PSD_ci = average_data(PSD, axis=0)
 
     return f, PSD_mean, PSD_ci
 
