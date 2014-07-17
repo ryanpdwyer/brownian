@@ -1,7 +1,7 @@
 from brownian import (BrownianMotionFitter, u, calc_k_c,
-                          translate_fit_parameters, average_data, get_data,
-                          fit_residuals)
-import pandas as pd
+                      translate_fit_parameters, avg_ci_data, get_data,
+                      fit_residuals)
+import h5py
 import numpy as np
 import os
 from nose.tools import assert_raises, assert_almost_equal
@@ -10,13 +10,18 @@ from uncertainties import ufloat
 from numpy.testing import assert_array_almost_equal
 from jittermodel.ubase import UnitCantilever
 
-os.chdir(os.path.dirname(os.path.realpath(__file__)))
-data = pd.read_pickle('data.pkl')
-f = data.f.values
-PSDx = data.PSDx.values
-PSD_wgt = data.PSDx.values * 0.1
+# Make sure we are executing from the current directory. See
+# http://stackoverflow.com/q/9887259/2823213
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+# Load some test data from an hdf5 file.
+with h5py.File('data.h5', 'r') as data:
+    f = data['f'].value
+    PSDx = data['PSDx'].value
+    PSD_wgt = data['PSDw'].value
+
 est_cant = UnitCantilever(f_c=63700*u.Hz, k_c=3.5*u.N/u.m,
-                        Q=20000*u.dimensionless)
+                          Q=20000*u.dimensionless)
 T = 295
 
 
@@ -39,6 +44,7 @@ class testBrownianMotionFitter_init(unittest.TestCase):
 
 
 ex_scaled_PSD = np.load('scale_data_PSD.npy')
+
 
 class testBrownianMotionFitter_fitting(unittest.TestCase):
     def setUp(self):
@@ -63,19 +69,6 @@ class testBrownianMotionFitter_fitting(unittest.TestCase):
         ex_initial_params = [8.9173850434295625e-05, 63700, 20000]
 
         np.testing.assert_allclose(ex_initial_params, self.bmf.initial_params)
-
-
-
-def test_first_pass():
-    pass
-
-
-def test_Px0():
-    pass
-
-
-def test_Pf():
-    pass
 
 
 def test_calc_k_c():
@@ -116,29 +109,39 @@ def test_translate_fit_parameters():
         assert_almost_equal(ex_i.magnitude.s, i.magnitude.s)
 
 
-def test_average_data():
+def test_avg_ci_data():
     data = np.array([[1.1, 2.4, 3.95, 5.],
                      [1.2, 2.7, 3.9, 5.4],
                      [1.2, 2.4, 4., 5.7],
                      [1.3, 2.7, 3.8, 4.7]])
     ex_avg = np.array([1.2, 2.55, 3.9125, 5.2])
     ex_ci = np.array([0.08001666, 0.16974098, 0.08368343, 0.43090293])
-    avg, ci = average_data(data)
+    avg, ci = avg_ci_data(data)
     assert_array_almost_equal(ex_avg, avg)
     assert_array_almost_equal(ex_ci, ci)
 
 
 def test_get_data():
     ex_f = np.array([1, 2, 3, 4, 5])
-    # ex_PSD = np.array([[1.1, 2.4, 3.95, 5., 5],
-    #                   [1.2, 2.7, 3.9, 5.4, 6],
-    #                   [1.2, 2.4, 4., 5.7, 6],
-    #                   [1.3, 2.7, 3.8, 4.7, 4]])
+    ex_PSD = np.array([[1.1,  1.2, 1.2, 1.3],
+                       [2.4,  2.7, 2.4, 2.7],
+                       [3.95, 3.9, 4,   3.8],
+                       [5,    5.4, 5.7, 4.7],
+                       [5,    6,   6,   4]])
+
+    # Create the test HDF5 file
+    f = h5py.File('test.h5', 'w')
+    f['f'] = ex_f
+    f['PSD'] = ex_PSD
+    f.close()
+
     ex_mean = np.array([1.2, 2.55, 3.9125, 5.2, 5.25])
     ex_ci = np.array([0.080016664930917122, 0.16974097914175013,
                       0.083683431255336824, 0.43090292797024871,
                       0.93827856560121137])
+
     f, psd_mean, psd_ci = get_data('test.h5')
+
     assert np.allclose(ex_f, f)
     assert np.allclose(ex_mean, psd_mean)
     assert np.allclose(ex_ci, psd_ci)

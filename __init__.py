@@ -281,7 +281,7 @@ def iterate_fit(func, x, y, p0, sigma_i, wgt):
     return popt[-1], pcov[-1], PSD_fit
 
 
-def average_data(data, axis=0):
+def avg_ci_data(data, axis=0):
     """Average the data along the given dimension, and calculate the 95
     percent confidence interval. Return the avg, ci arrays."""
     data_avg = data.mean(axis=axis)
@@ -300,10 +300,11 @@ def get_data(filename):
         A table containing the frequencies of each point in the power
         spectrum.
 
-    PSD/
-        A group containing the power spectrum data in datafiles within. The
-        datafiles within are typically named d001, d002, etc, but the specific
-        name does not matter as long as it is in the PSD group.
+    PSD
+        Contains power spectra PSD_0(f) through PSD_(n-1)(f), arranged
+            as follows, with each power spectrum occupying 1 column. 
+        PSD_0(0 Hz) PSD_1(O Hz)
+        PSD_0(1 Hz) PSD_1(1 Hz) ...
 
 
     See http://h5labview.sourceforge.net and http://pytables.github.io for
@@ -313,7 +314,7 @@ def get_data(filename):
     f = fh['f'].value
     PSD = fh['PSD'].value
 
-    PSD_mean, PSD_ci = average_data(PSD, axis=0)
+    PSD_mean, PSD_ci = avg_ci_data(PSD, axis=1)
 
     return f, PSD_mean, PSD_ci
 
