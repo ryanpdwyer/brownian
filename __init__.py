@@ -309,10 +309,15 @@ def get_data(filename):
 
     See http://h5labview.sourceforge.net and http://pytables.github.io for
     more information."""
-    fh = h5py.File(filename, 'r')
-
-    f = fh['f'].value
-    PSD = fh['PSD'].value
+    with h5py.File(filename, 'r') as fh:
+        if fh.get('PSD', getclass=True) is h5py.Group:
+            raise ValueError("It appears you have inputted an old hdf5 file,\
+                              with power spectrum in a separate dataset.\
+                              Use the function convert_data to convert to\
+                              the new file format, and try getting the\
+                              data again.")
+        f = fh['f'].value
+        PSD = fh['PSD'].value
 
     PSD_mean, PSD_ci = avg_ci_data(PSD, axis=1)
 
@@ -331,3 +336,23 @@ def fit_residuals(sorted_residuals):
     popt, _ = curve_fit(cdf, sorted_residuals, y)
 
     return popt
+
+
+def convert_data(oldfile, newfile, fileformat='v1'):
+    """Converts data from the v1 format to the v2 format"""
+    oldf = h5py.File(oldfile, 'r')
+    if oldf.get('PSD', getclass=True) is not h5py.Group:
+        oldf.close()
+        raise ValueError("It appears you have inputted a new style file.\
+            The file will not be converted.")
+    else:
+        newf = h5py.File(newfile, 'w')
+        newf['f'] = oldf['f'][:]
+        # Include any dataset that starts with a small d
+        data_list = [value for key, value in oldf['PSD'].items()
+                     if key.startswith('d')]
+        newf['PSD'] = np.empty((oldf['f'].value.size, len(data_list)))
+        for i, val in enumerate(data_list):
+            newf['PSD'][:, i] = val[:]
+        oldf.close()
+        newf.close()

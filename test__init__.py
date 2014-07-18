@@ -1,9 +1,10 @@
 from brownian import (BrownianMotionFitter, u, calc_k_c,
                       translate_fit_parameters, avg_ci_data, get_data,
-                      fit_residuals)
+                      fit_residuals, convert_data)
 import h5py
 import numpy as np
 import os
+import errno
 from nose.tools import assert_raises, assert_almost_equal
 import unittest
 from uncertainties import ufloat
@@ -13,6 +14,17 @@ from jittermodel.ubase import UnitCantilever
 # Make sure we are executing from the current directory. See
 # http://stackoverflow.com/q/9887259/2823213
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+
+def silentremove(filename):
+    """If a file exists, delete it. Otherwise, return nothing.
+       See http://stackoverflow.com/q/10840533/2823213"""
+    try:
+        os.remove(filename)
+    except OSError as e:  # this would be "except OSError, e:" before Python 2.6
+        if e.errno != errno.ENOENT:  # errno.ENOENT = no such file or directory
+            raise  # re-raise exception if a different error occured
+
 
 # Load some test data from an hdf5 file.
 with h5py.File('data.h5', 'r') as data:
@@ -130,10 +142,9 @@ def test_get_data():
                        [5,    6,   6,   4]])
 
     # Create the test HDF5 file
-    f = h5py.File('test.h5', 'w')
-    f['f'] = ex_f
-    f['PSD'] = ex_PSD
-    f.close()
+    with h5py.File('test.h5', 'w') as fh:
+        fh['f'] = ex_f
+        fh['PSD'] = ex_PSD
 
     ex_mean = np.array([1.2, 2.55, 3.9125, 5.2, 5.25])
     ex_ci = np.array([0.080016664930917122, 0.16974097914175013,
@@ -145,6 +156,68 @@ def test_get_data():
     assert np.allclose(ex_f, f)
     assert np.allclose(ex_mean, psd_mean)
     assert np.allclose(ex_ci, psd_ci)
+
+
+class TestOldDataFormat(unittest.TestCase):
+    """Test the old data format, with data stored in a group 'PSD', and
+    individual power spectra stored underneath that as
+    'PSD/d001', 'PSD/d002'..."""
+    def setUp(self):
+        # Filenames
+        self.testv1 = 'test-data-v1.h5'  # Old data format
+        self.testv2 = 'test-data-v2.h5'
+        self.converted = 'converted-data.h5'
+        # Sample data
+        self.ex_f = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        self.d1 = np.array([1.1, 2.4, 3.95, 5.,  5.])
+        self.d2 = np.array([1.2, 2.7, 3.9, 5.4,  6.])
+        self.d3 = np.array([1.2, 2.4, 4., 5.7,  6.])
+        self.d4 = np.array([1.3, 2.7, 3.8, 4.7,  4.])
+
+        self.ex_PSD = np.array([[1.1,  1.2, 1.2, 1.3],
+                               [2.4,  2.7, 2.4, 2.7],
+                               [3.95, 3.9, 4,   3.8],
+                               [5,    5.4, 5.7, 4.7],
+                               [5,    6,   6,   4]])
+        # Create the HDF5 file test1
+        with h5py.File(self.testv1, 'w') as fh:
+            fh.create_group('PSD')
+            fh.create_dataset('f', data=self.ex_f)
+            fh.create_dataset('PSD/d001', data=self.d1)
+            fh.create_dataset('PSD/d002', data=self.d2)
+            fh.create_dataset('PSD/d003', data=self.d3)
+            fh.create_dataset('PSD/d004', data=self.d4)
+
+        # Create the test HDF5 file test2
+        with h5py.File(self.testv2, 'w') as fh:
+            fh['f'] = self.ex_f
+            fh['PSD'] = self.ex_PSD
+
+    def tearDown(self):
+        silentremove(self.testv1)
+        silentremove(self.testv2)
+        silentremove(self.converted)
+
+    def test_old_data_format_error(self):
+        """Make sure that the function get_data throws a useful error when it
+        encounters an file with a PSD group."""
+        assert_raises(ValueError, get_data, self.testv1)
+
+    def test_convert_data(self):
+        convert_data(self.testv1, self.converted)
+        f, psd_mean, psd_ci = get_data(self.converted)
+
+        ex_mean = np.array([1.2, 2.55, 3.9125, 5.2, 5.25])
+        ex_ci = np.array([0.080016664930917122, 0.16974097914175013,
+                      0.083683431255336824, 0.43090292797024871,
+                      0.93827856560121137])
+
+        assert np.allclose(self.ex_f, f)
+        assert np.allclose(ex_mean, psd_mean)
+        assert np.allclose(ex_ci, psd_ci)
+
+    def test_covert_data_new_format(self):
+        assert_raises(ValueError, convert_data, self.testv2, self.converted)
 
 
 def test_fit_residuals():
