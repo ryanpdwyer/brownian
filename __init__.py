@@ -77,12 +77,24 @@ class BrownianMotionFitter(object):
         self.PSD = self.PSD_raw / self.P_detector0_raw
         self.P_detector0 = 1
 
-    def calc_fit(self, f_min=1e3, f_max=1e5):
+    def calc_fit(self, f_min=None, f_max=None):
         """Fit the power spectrum data over the frequency range
-        f_min to f_min, using a 3 pass approach."""
-        self.f_min = f_min
-        self.f_max = f_max
+        f_min to f_min, using a 3 pass approach.
 
+        If no f_min and f_max are provided, it fits over the entire range
+        of input frequencies."""
+
+        # Set f_min, f_max
+        if f_min is None:
+            self.f_min = self.f.min()
+        else:
+            self.f_min = f_min
+        if f_max is None:
+            self.f_max = self.f.max()
+        else:
+            self.f_max = f_max
+
+        # Store a mask to aid fitting and plotting
         self.mask = mask = make_mask(self.f, f_min, f_max)
 
         self._guess_P_detector()
