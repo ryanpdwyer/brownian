@@ -3,7 +3,7 @@ Noise Fitting Brownian Motion Data
 Ryan Dwyer
 2013-11-22
 
-This document will implement John Marohn's Brownian motion noise 
+This document will implement John Marohn's Brownian motion noise
 fitting routine in Python. The file has the following stuructre.
 
     class BrownianMotionFitter
@@ -15,14 +15,13 @@ numpy
 scipy
 matplotlib
 pint
-pandas
-pytables
+h5py
 
 """
 
 from __future__ import division
 import numpy as np
-import scipy
+import scipy as sp
 import scipy.stats
 from scipy.optimize import curve_fit
 import matplotlib as mpl
@@ -34,6 +33,36 @@ from jittermodel.ubase import u
 from jittermodel.ubase import UnitCantilever
 
 k_B = 1.3806504e-23 * u.J / u.K
+
+
+class ConfidenceInterval(object):
+    # Is this class a good idea?
+    # Could be useful glue code, or just another pointless abstraction
+    def __init__(self, mean, stdev, n):
+        """Define a class to calculate confidence intervals\.
+
+        mean
+            array of mean values
+
+        stdev
+            array of standard deviations
+
+        n
+            number of data points collected"""
+        self.mean = mean
+        self.stdev = stdev
+        self.n = n
+
+    def calc_ci(self, confidence=0.95):
+        """Return a confidence interval for the given data.
+
+        Assumes a 95 percent confidence interval. Stores result
+        at `self.ci`."""
+        self.confidence = confidence
+        # interval containing confidence of the normal distribution
+        z = sp.stats.norm.interval(confidence)[1]
+        self.ci = self.stdev / self.n**0.5 * z
+        return self.ci
 
 
 class BrownianMotionFitter(object):
@@ -57,7 +86,7 @@ class BrownianMotionFitter(object):
             temperature (K)
 
         est_cant
-            A unitted cantilever.
+            A unitted cantilever with f_c, k_c and Q defined as best guesses.
 
         """
         self.f = f
@@ -95,7 +124,7 @@ class BrownianMotionFitter(object):
             self.f_max = f_max
 
         # Store a mask to aid fitting and plotting
-        self.mask = mask = make_mask(self.f, f_min, f_max)
+        self.mask = mask = make_mask(self.f, self.f_min, self.f_max)
 
         self._guess_P_detector()
         self._scale_data()
@@ -183,11 +212,11 @@ class BrownianMotionFitter(object):
         self.f_c, self.k_c, self.Q, self.P_detector = f_c, k_c, Q, P_detector
 
     def print_output(self):
-        print("""
-    Resonence frequency f_c: {self.f_c:!p}
-    Spring constant k_c: {self.k_c:!p}
-    Quality Factor Q: {self.Q:!p}
-    Detector Noise: {self.P_detector}
+        print(u"""
+    Resonence frequency f_c: {self.f_c:~P}
+    Spring constant k_c: {self.k_c:~P}
+    Quality Factor Q: {self.Q:~P}
+    Detector Noise: {self.P_detector:~P}
             """.format(self=self))
 
     def plot_fit(self):
@@ -343,7 +372,7 @@ def fit_residuals(sorted_residuals):
     y = np.arange(1, 1 + size) / size
 
     def cdf(x, loc, scale):
-        return scipy.stats.norm.cdf(x, loc=loc, scale=scale)
+        return sp.stats.norm.cdf(x, loc=loc, scale=scale)
 
     popt, _ = curve_fit(cdf, sorted_residuals, y)
 
@@ -361,9 +390,12 @@ def convert_data(oldfile, newfile, fileformat='v1'):
         newf = h5py.File(newfile, 'w')
         newf['f'] = oldf['f'][:]
         # Include any dataset that starts with a small d
+        # This should catch the default d001, d0002, d003,
+        # 
         data_list = [value for key, value in oldf['PSD'].items()
                      if key.startswith('d')]
         newf['PSD'] = np.empty((oldf['f'].value.size, len(data_list)))
+
         for i, val in enumerate(data_list):
             newf['PSD'][:, i] = val[:]
         oldf.close()
