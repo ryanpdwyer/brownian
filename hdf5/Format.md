@@ -7,7 +7,7 @@ Here is a sample of the HDF5 file format.
 /
 attributes: {'date': '2014-07-22',
              'time': '13:00:00',
-             'version': '1.0',
+             'version': 'pos-PSD-1.0',
              'instrument': 'PSB-B19-AFM',
              'help': 'Nice help about the data structure; omitted here for brevity.'}
         f
