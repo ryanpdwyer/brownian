@@ -12,7 +12,7 @@ attributes: {'date': '2014-07-22',
              'help': 'Nice help about the data structure; omitted here for brevity.'}
         f
         attributes: {'unit': 'Hz',
-                     'help': 'Frequency array for PSD'}
+                     'help': 'Frequency array for PSD.'}
         [0, 0.5, 1, 1.5]
 
     PSD/
