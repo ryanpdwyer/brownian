@@ -1,10 +1,9 @@
 from brownian import (BrownianMotionFitter, u, calc_k_c,
                       translate_fit_parameters, avg_ci_data, get_data,
-                      fit_residuals, convert_data)
+                      fit_residuals, convert_data, silentremove)
 import h5py
 import numpy as np
 import os
-import errno
 from nose.tools import assert_raises, assert_almost_equal
 import unittest
 from uncertainties import ufloat
@@ -16,14 +15,7 @@ from jittermodel.ubase import UnitCantilever
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
-def silentremove(filename):
-    """If a file exists, delete it. Otherwise, return nothing.
-       See http://stackoverflow.com/q/10840533/2823213"""
-    try:
-        os.remove(filename)
-    except OSError as e:  # this would be "except OSError, e:" before Python 2.6
-        if e.errno != errno.ENOENT:  # errno.ENOENT = no such file or directory
-            raise  # re-raise exception if a different error occured
+
 
 
 # Load some test data from an hdf5 file.

@@ -20,6 +20,8 @@ h5py
 """
 
 from __future__ import division
+import os
+import errno
 import numpy as np
 import scipy as sp
 import scipy.stats
@@ -391,7 +393,6 @@ def convert_data(oldfile, newfile, fileformat='v1'):
         newf['f'] = oldf['f'][:]
         # Include any dataset that starts with a small d
         # This should catch the default d001, d0002, d003,
-        # 
         data_list = [value for key, value in oldf['PSD'].items()
                      if key.startswith('d')]
         newf['PSD'] = np.empty((oldf['f'].value.size, len(data_list)))
@@ -401,3 +402,11 @@ def convert_data(oldfile, newfile, fileformat='v1'):
         oldf.close()
         newf.close()
 
+def silentremove(filename):
+    """If a file exists, delete it. Otherwise, return nothing.
+       See http://stackoverflow.com/q/10840533/2823213"""
+    try:
+        os.remove(filename)
+    except OSError as e:  # this would be "except OSError, e:" before Python 2.6
+        if e.errno != errno.ENOENT:  # errno.ENOENT = no such file or directory
+            raise  # re-raise exception if a different error occured
