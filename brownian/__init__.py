@@ -100,7 +100,7 @@ class BrownianMotionFitter(object):
     def _guess_P_detector(self):
         """Guess a low, but reasonable number for the detector noise floor.
         This is used to scale the data for fitting."""
-        self.P_detector0_raw = np.percentile(self.PSD_raw, 2)
+        self.P_detector0_raw = np.percentile(self.PSD_raw[self.mask], 25)
 
     def _scale_data(self):
         """Scale the raw data for fitting, so that floating point number errors
@@ -136,14 +136,14 @@ class BrownianMotionFitter(object):
         PSD_ci = self.PSD_ci = self.PSD_ci_raw[mask]
         self.fit_PSD_raw = self.PSD_raw[mask]
 
-        self.calc_initial_params()
+        self._calc_initial_params()
 
         self._first_pass(f, PSD, PSD_ci)
         self._second_pass(f, PSD, PSD_ci)
         self._final_pass(f, PSD, PSD_ci)
         self._prepare_output()
 
-    def calc_initial_params(self):
+    def _calc_initial_params(self):
         """Use the estimates to calculate initial parameters to use for
         the fitting functions."""
         f_c = self.est_cant.f_c.to(u.Hz)
@@ -237,6 +237,13 @@ class BrownianMotionFitter(object):
         plt.plot(self.fit_f, self.reduced_residuals)
         plt.show()
 
+    def plot_cdf(self):
+        x = self.reduced_residuals_sorted
+        size = x.size
+        y = np.arange(1, 1 + size) / size
+        popt = self.p_residuals
+        plt.plot(x, y, 'bo', x, cdf(x, *popt), 'g-')
+
     def fit_residuals(self):
         self.p_residuals = fit_residuals(self.reduced_residuals_sorted)
         print("""The residuals have mean {self.p_residuals[0]:.2e}
@@ -286,16 +293,18 @@ def make_mask(f, f_min, f_max):
 
 def translate_fit_parameters(popt, pcov, P_detector0_raw, T=300*u.K):
     """Take the fit parameters and covariances, and converts them to
-    SI values and errors for f_c, k_c, Q."""
+    SI values and errors for f_c, k_c, Q.
+
+    Also makes sure all values are positive."""
     pvals = correlated_values(popt, pcov)
     punits = [u.nm**2 / u.Hz, u.Hz, u.dimensionless, u.nm**2 / u.Hz]
     scales = [P_detector0_raw, 1, 1, P_detector0_raw]
 
-    P_x0, f_c, Q, P_detector = [uncert_val * unit * scale for
+    P_x0, f_c, Q, P_detector = [np.abs(uncert_val * unit * scale) for
                                 uncert_val, unit, scale in
                                 zip(pvals, punits, scales)]
 
-    k_c = calc_k_c(f_c, Q, P_x0, T)
+    k_c = np.abs(calc_k_c(f_c, Q, P_x0, T))
     return f_c, k_c, Q, P_detector
 
 
@@ -367,14 +376,15 @@ def get_data(filename):
     return f, PSD_mean, PSD_ci
 
 
+def cdf(x, loc, scale):
+    """The cumulative probability function of the normal distribution."""
+    return sp.stats.norm.cdf(x, loc=loc, scale=scale)
+
 def fit_residuals(sorted_residuals):
     """Return the result of fitting the residuals to the normal cdf.
     """
     size = sorted_residuals.size
     y = np.arange(1, 1 + size) / size
-
-    def cdf(x, loc, scale):
-        return sp.stats.norm.cdf(x, loc=loc, scale=scale)
 
     popt, _ = curve_fit(cdf, sorted_residuals, y)
 
