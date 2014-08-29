@@ -7,7 +7,8 @@
 **.png
 **.jpeg
 **.jpg
-ex/
+brownian/ex/
+docs/_build/
 **.sublime-project
 **.sublime-workspace
 **.egg-info
