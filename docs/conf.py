@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import sys, os
+import os
 
 # Import our package; this is the standard way to use Sphinx
 

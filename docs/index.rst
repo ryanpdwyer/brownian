@@ -6,6 +6,8 @@ Contents:
 .. toctree::
    :maxdepth: 1
 
+   __init__.rst
+
    
 
 Indices and Tables

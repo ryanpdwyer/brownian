@@ -1,21 +1,23 @@
 """
 Noise Fitting Brownian Motion Data
+
 Ryan Dwyer
+
 2013-11-22
 
 This document will implement John Marohn's Brownian motion noise
-fitting routine in Python. The file has the following stuructre.
-
-    class BrownianMotionFitter
-        This is the main object that stores, fits, and plots the data.
-
+fitting routine in Python. The class ``BrownianMotionFitter`` implements the
+fitting routine. The rest of the module consists of helper functions for
+specific portions of the fitting procedure and data input / output.
 
 Dependencies:
-numpy
-scipy
-matplotlib
-pint
-h5py
+
+- numpy
+- scipy
+- matplotlib
+- pint
+- uncertainties
+- h5py
 
 """
 
