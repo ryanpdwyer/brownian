@@ -8,24 +8,22 @@ from nose.tools import assert_raises, assert_almost_equal
 import unittest
 from uncertainties import ufloat
 from numpy.testing import assert_array_almost_equal
-from jittermodel.ubase import UnitCantilever
+from jittermodel.base import Cantilever
 
 # Make sure we are executing from the current directory. See
 # http://stackoverflow.com/q/9887259/2823213
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-
-
-
-
 # Load some test data from an hdf5 file.
+# TODO: Get rid of dependence on .h5 file; this data can be programatically
+#       generated.
 with h5py.File('data.h5', 'r') as data:
     f = data['f'].value
     PSDx = data['PSDx'].value
     PSD_wgt = data['PSDw'].value
 
-est_cant = UnitCantilever(f_c=63700*u.Hz, k_c=3.5*u.N/u.m,
-                          Q=20000*u.dimensionless)
+est_cant = Cantilever(f_c=63700*u.Hz, k_c=3.5*u.N/u.m,
+                      Q=20000*u.dimensionless)
 T = 295
 
 
@@ -68,7 +66,7 @@ class testBrownianMotionFitter_fitting(unittest.TestCase):
         self.bmf.P_detector0_raw = 6.5209499999999999e-09
         self.bmf.P_detector0 = 1
         self.bmf.PSD = ex_scaled_PSD
-        self.bmf.calc_initial_params()
+        self.bmf._calc_initial_params()
 
         ex_initial_params = [8.9173850434295625e-05, 63700, 20000]
 

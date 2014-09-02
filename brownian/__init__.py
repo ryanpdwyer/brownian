@@ -33,8 +33,8 @@ import matplotlib.pyplot as plt
 # Backend should be set correctly here.
 from uncertainties import correlated_values, ufloat
 import h5py
-from jittermodel.ubase import u
-from jittermodel.ubase import UnitCantilever
+from jittermodel.base import u
+from jittermodel.base import Cantilever
 
 k_B = 1.3806504e-23 * u.J / u.K
 
@@ -102,6 +102,11 @@ class BrownianMotionFitter(object):
     def _guess_P_detector(self):
         """Guess a low, but reasonable number for the detector noise floor.
         This is used to scale the data for fitting."""
+        try:
+            self.mask
+        except AttributeError:
+            self.mask = np.isfinite(self.PSD_raw)  # Make a dummy mask of all trues
+
         self.P_detector0_raw = np.percentile(self.PSD_raw[self.mask], 25)
 
     def _scale_data(self):
