@@ -372,7 +372,7 @@ def get_data(filename):
         # Put some checks about old-style files here.
         f = fh['x'].value
         PSD_mean = fh['y'].value
-        PSD_ci = fh['y_std'] * 1.96 / fh['y'].attrs['n_avg']**0.5
+        PSD_ci = fh['y_std'].value * 1.96 / fh['y'].attrs['n_avg']**0.5
 
     return f, PSD_mean, PSD_ci
 
