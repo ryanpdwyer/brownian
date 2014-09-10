@@ -369,16 +369,10 @@ def get_data(filename):
     See http://h5labview.sourceforge.net and http://pytables.github.io for
     more information."""
     with h5py.File(filename, 'r') as fh:
-        if fh.get('PSD', getclass=True) is h5py.Group:
-            raise ValueError("It appears you have inputted an old hdf5 file,\
-                              with power spectrum in a separate dataset.\
-                              Use the function convert_data to convert to\
-                              the new file format, and try getting the\
-                              data again.")
-        f = fh['f'].value
-        PSD = fh['PSD'].value
-
-    PSD_mean, PSD_ci = avg_ci_data(PSD, axis=1)
+        # Put some checks about old-style files here.
+        f = fh['x'].value
+        PSD_mean = fh['y'].value
+        PSD_ci = fh['y_std'] * 1.96 / fh['y'].attrs['n_avg']**0.5
 
     return f, PSD_mean, PSD_ci
 

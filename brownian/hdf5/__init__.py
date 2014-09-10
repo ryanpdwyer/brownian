@@ -53,22 +53,27 @@ omitted here for brevity.'''}
     update_h5py_attrs(fh.attrs, file_attrs)
 
     # Set frequency information
-    fh['f'] = np.array([0, 0.5, 1.0, 1.5])
+    fh['x'] = np.array([0, 0.5, 1.0, 1.5])
 
-    f_attrs = {'unit': 'Hz',
+    x_attrs = {'name': 'Frequency',
+               'unit': 'Hz',
+               'label': 'Frequency [Hz]',
+               'label_latex': r'$f \: [\mathrm{Hz}]',
                'help': 'Frequency array for PSD.'}
-    update_h5py_attrs(fh['f'].attrs, f_attrs)
+    update_h5py_attrs(fh['x'].attrs, x_attrs)
 
     # Set PSD information
-    fh.create_group('PSD')
-    fh['PSD/mean'] = np.array([1, 2.1, 2.9, 4])
-    fh['PSD/stdev'] = np.array([0.2, 0.3, 0.4, 0.5])
+    fh['y'] = np.array([1, 2.1, 2.9, 4])
+    y_attrs = {'name': 'PSD',
+               'n_avg': 4,
+               'units': 'nm^2/Hz',
+               'label': 'PSD [nm^2/Hz]',
+               'label_latex': r'P_{\delta x} \: [\mathrm{nm}^2/\mathrm{Hz}]',
+               'help': 'Power spectral density of position fluctuations.'}
 
-    PSD_attrs = {'n': 4,
-                 'units': 'nm^2/Hz',
-                 'help': 'Power spectral density of position fluctuations.'}
+    update_h5py_attrs(fh['y'].attrs, y_attrs)
 
-    update_h5py_attrs(fh['PSD'].attrs, PSD_attrs)
+    fh['y_std'] = np.array([0.2, 0.3, 0.4, 0.5])
 
     fh.close()
 
