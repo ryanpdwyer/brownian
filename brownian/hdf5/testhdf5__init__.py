@@ -49,4 +49,5 @@ omitted here for brevity.'''}
         assert fh['PSD'].attrs.items() == self.PSD_attrs.items()
 
     def tearDown(self):
+        self.fh.close()
         silentremove(self.filename)
