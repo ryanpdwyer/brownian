@@ -17,5 +17,5 @@ setup(name='brownian',
       packages=['brownian'],
       install_requires=[
       'numpy', 'scipy', 'matplotlib', 'pint',
-      'nose', 'h5py', 'uncertainties'
+      'nose', 'cython', 'h5py', 'uncertainties'
       ])

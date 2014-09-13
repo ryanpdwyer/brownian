@@ -1,13 +1,18 @@
 from brownian import (BrownianMotionFitter, u, calc_k_c,
                       translate_fit_parameters, avg_ci_data, get_data,
-                      fit_residuals, silentremove)
+                      fit_residuals, convert_data, silentremove)
 import h5py
 import numpy as np
-from nose.tools import assert_almost_equal
+import os
+from nose.tools import assert_raises, assert_almost_equal
 import unittest
 from uncertainties import ufloat
 from numpy.testing import assert_array_almost_equal
 from jittermodel.base import Cantilever
+
+# Make sure we are executing from the current directory. See
+# http://stackoverflow.com/q/9887259/2823213
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # Load some test data from an hdf5 file.
 # TODO: Get rid of dependence on .h5 file; this data can be programatically
