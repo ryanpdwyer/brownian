@@ -153,6 +153,7 @@ def test_get_data():
     assert np.allclose(ex_ci, psd_ci)
 
 
+@unittest.skip("Currently support for the old data format is broken.")
 class TestOldDataFormat(unittest.TestCase):
     """Test the old data format, with data stored in a group 'PSD', and
     individual power spectra stored underneath that as
@@ -193,27 +194,27 @@ class TestOldDataFormat(unittest.TestCase):
         silentremove(self.testv2)
         silentremove(self.converted)
 
-    # def test_old_data_format_error(self):
-    #     """Make sure that the function get_data throws a useful error when it
-    #     encounters an file with a PSD group."""
-    #     assert_raises(ValueError, get_data, self.testv1)
+    def test_old_data_format_error(self):
+        """Make sure that the function get_data throws a useful error when it
+        encounters an file with a PSD group."""
+        assert_raises(ValueError, get_data, self.testv1)
 
-    # def test_convert_data(self):
-    #     convert_data(self.testv1, self.converted)
-    #     f, psd_mean, psd_ci = get_data(self.converted)
+    def test_convert_data(self):
+        convert_data(self.testv1, self.converted)
+        f, psd_mean, psd_ci = get_data(self.converted)
 
-    #     ex_mean = np.array([1.2, 2.55, 3.9125, 5.2, 5.25])
-    #     ex_ci = np.array([0.080016664930917122, 0.16974097914175013,
-    #                   0.083683431255336824, 0.43090292797024871,
-    #                   0.93827856560121137])
+        ex_mean = np.array([1.2, 2.55, 3.9125, 5.2, 5.25])
+        ex_ci = np.array([0.080016664930917122, 0.16974097914175013,
+                      0.083683431255336824, 0.43090292797024871,
+                      0.93827856560121137])
 
-    #     assert np.allclose(self.ex_f, f)
-    #     assert np.allclose(ex_mean, psd_mean)
-    #     assert np.allclose(ex_ci, psd_ci)
+        assert np.allclose(self.ex_f, f)
+        assert np.allclose(ex_mean, psd_mean)
+        assert np.allclose(ex_ci, psd_ci)
 
-    # # Test should be skipped for now
-    # def test_covert_data_new_format(self):
-    #     assert_raises(ValueError, convert_data, self.testv2, self.converted)
+    # Test should be skipped for now
+    def test_covert_data_new_format(self):
+        assert_raises(ValueError, convert_data, self.testv2, self.converted)
 
 
 def test_fit_residuals():
