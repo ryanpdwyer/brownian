@@ -24,6 +24,7 @@ Dependencies:
 from __future__ import division
 import os
 import errno
+
 import numpy as np
 import scipy as sp
 import scipy.stats
@@ -33,8 +34,7 @@ import matplotlib.pyplot as plt
 # Backend should be set correctly here.
 from uncertainties import correlated_values, ufloat
 import h5py
-from jittermodel.base import u
-from jittermodel.base import Cantilever
+from jittermodel.base import u, Cantilever
 
 k_B = u.boltzmann_constant
 

@@ -1,14 +1,16 @@
-from brownian import (BrownianMotionFitter, u, calc_k_c,
-                      translate_fit_parameters, avg_ci_data, get_data,
-                      fit_residuals, convert_data, silentremove)
 import h5py
 import numpy as np
 import os
-from nose.tools import assert_raises, assert_almost_equal
-import unittest
+
 from uncertainties import ufloat
+
+import unittest
+from nose.tools import assert_raises, assert_almost_equal
 from numpy.testing import assert_array_almost_equal
-from jittermodel.base import Cantilever
+
+from brownian import (Cantilever, BrownianMotionFitter, u, calc_k_c,
+                      translate_fit_parameters, avg_ci_data, get_data,
+                      fit_residuals, convert_data, silentremove)
 
 # Make sure we are executing from the current directory. See
 # http://stackoverflow.com/q/9887259/2823213
