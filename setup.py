@@ -9,7 +9,7 @@ except ImportError:
 
 from distutils.core import setup
 
-setup(name='noisefitting',
+setup(name='brownian',
       description="",
       version="0.1dev",
       author='Ryan Dwyer',
@@ -17,5 +17,5 @@ setup(name='noisefitting',
       packages=['brownian'],
       install_requires=[
       'numpy', 'scipy', 'matplotlib', 'pint',
-      'nose', 'cython', 'h5py'
+      'nose', 'h5py', 'uncertainties'
       ])
