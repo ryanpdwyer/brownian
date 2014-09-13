@@ -105,7 +105,8 @@ class BrownianMotionFitter(object):
         try:
             self.mask
         except AttributeError:
-            self.mask = np.isfinite(self.PSD_raw)  # Make a dummy mask of all trues
+            # Make a dummy mask of all trues if no mask has been set
+            self.mask = np.isfinite(self.PSD_raw)
 
         self.P_detector0_raw = np.percentile(self.PSD_raw[self.mask], 25)
 
