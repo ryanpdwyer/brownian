@@ -1,12 +1,12 @@
 import h5py
 import numpy as np
-from brownian import silentremove
-from nose.tools import assert_almost_equal, ok_
-from numpy.testing import assert_array_almost_equal
+
 import unittest
-from brownian import hdf5
+from nose.tools import ok_
+from numpy.testing import assert_array_almost_equal
+
+from brownian import silentremove
 from brownian.hdf5 import generate_sample_file
-import os
 
 
 class Test_generate_sample_file(unittest.TestCase):
