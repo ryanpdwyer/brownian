@@ -68,7 +68,7 @@ class testBrownianMotionFitter_fitting(unittest.TestCase):
         self.bmf.PSD = ex_scaled_PSD
         self.bmf._calc_initial_params()
 
-        ex_initial_params = [8.9173850434295625e-05, 63700, 20000]
+        ex_initial_params = [8.917375e-05, 63700, 20000]
 
         np.testing.assert_allclose(ex_initial_params, self.bmf.initial_params)
 
@@ -87,7 +87,9 @@ def test_calc_k_c():
     f_c = ufloat(50000, 0.5) * u.Hz  # 1/100000 relative
     Q = ufloat(10000, 100) * u.dimensionless  # 1/100
     T = ufloat(300, 3) * u.K  # 1/100
-    ex_k_c = ufloat(3, 0.05196153288731964) * u.N/u.m
+    # ex_k_c is no longer a nice number because I switched from a rounded to
+    # more exact value for Boltzmann's constant
+    ex_k_c = ufloat(2.9999965233852217, 0.05196147267057527) * u.N/u.m
     k_c = calc_k_c(f_c, Q, P_x0, T)
     assert_almost_equal(k_c.magnitude.n, ex_k_c.magnitude.n)
     assert_almost_equal(k_c.magnitude.s, ex_k_c.magnitude.s)
@@ -102,7 +104,7 @@ def test_translate_fit_parameters():
     P_detector0_raw = 1e-6
     T = ufloat(300, 3) * u.K
     ex_output = [ufloat(50000, 0.5) * u.Hz,
-                 ufloat(3, 0.05196153288731964) * u.N/u.m,
+                 ufloat(2.9999965233852217, 0.05196147267057527) * u.N/u.m,
                  ufloat(10000, 100) * u.dimensionless,
                  ufloat(1e-12, 1e-13) * u.nm ** 2 / u.Hz]
     output = translate_fit_parameters(popt, pcov, P_detector0_raw, T)

@@ -36,37 +36,7 @@ import h5py
 from jittermodel.base import u
 from jittermodel.base import Cantilever
 
-k_B = 1.3806504e-23 * u.J / u.K
-
-
-class ConfidenceInterval(object):
-    # Is this class a good idea?
-    # Could be useful glue code, or just another pointless abstraction
-    def __init__(self, mean, stdev, n):
-        """Define a class to calculate confidence intervals\.
-
-        mean
-            array of mean values
-
-        stdev
-            array of standard deviations
-
-        n
-            number of data points collected"""
-        self.mean = mean
-        self.stdev = stdev
-        self.n = n
-
-    def calc_ci(self, confidence=0.95):
-        """Return a confidence interval for the given data.
-
-        Assumes a 95 percent confidence interval. Stores result
-        at `self.ci`."""
-        self.confidence = confidence
-        # interval containing confidence of the normal distribution
-        z = sp.stats.norm.interval(confidence)[1]
-        self.ci = self.stdev / self.n**0.5 * z
-        return self.ci
+k_B = u.boltzmann_constant
 
 
 class BrownianMotionFitter(object):
