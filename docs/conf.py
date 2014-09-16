@@ -15,7 +15,7 @@ MOCK_MODULES = [
     'numpy',
     'scipy',
     'scipy.stats',
-    'scipy.curve_fit',
+    'scipy.optimize',
     'h5py',
     'jittermodel']
 
