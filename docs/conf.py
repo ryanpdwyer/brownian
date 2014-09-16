@@ -11,7 +11,7 @@ class Mock(MagicMock):
 
 MOCK_MODULES = [
     'matplotlib',
-    'matplotlib.pypplot',
+    'matplotlib.pyplot',
     'numpy',
     'scipy',
     'scipy.stats',
