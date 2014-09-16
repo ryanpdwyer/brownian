@@ -189,6 +189,7 @@ class BrownianMotionFitter(object):
         self.residuals = (self.PSD_fit - self.PSD[self.mask])
         self.reduced_residuals = self.residuals / self.PSD_fit
         self.reduced_residuals_sorted = np.sort(self.reduced_residuals)
+        self._fit_residuals()
         self.f_c, self.k_c, self.Q, self.P_detector = f_c, k_c, Q, P_detector
 
     def print_output(self):
@@ -222,7 +223,7 @@ class BrownianMotionFitter(object):
         popt = self.p_residuals
         plt.plot(x, y, 'bo', x, cdf(x, *popt), 'g-')
 
-    def fit_residuals(self):
+    def _fit_residuals(self):
         self.p_residuals = fit_residuals(self.reduced_residuals_sorted)
         print("""The residuals have mean {self.p_residuals[0]:.2e}
 and standard deviation {self.p_residuals[1]:.2e}""".format(self=self))
