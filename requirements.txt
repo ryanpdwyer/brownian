@@ -4,7 +4,7 @@ h5py==2.3.1
 jittermodel==0.1
 matplotlib==1.4.0
 mock==1.0.1
--e git+git@github.com:ryanpdwyer/brownian.git@f39b9ce9b630b3687caa1c356c0ab1041989bc28#egg=noisefitting-master
+-e git+git@github.com:ryanpdwyer/brownian.git@9e8f062254f9b44e1c5b9c3de2cdc083c9d735ed#egg=noisefitting-master
 nose==1.3.4
 numpy==1.9.0
 pyparsing==2.0.2
