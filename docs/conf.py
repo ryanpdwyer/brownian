@@ -18,7 +18,8 @@ MOCK_MODULES = [
     'scipy.optimize',
     'h5py',
     'jittermodel',
-    'jittermodel.base']
+    'jittermodel.base',
+    'uncertainties']
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
