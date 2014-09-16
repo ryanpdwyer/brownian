@@ -2,6 +2,7 @@ Brownian
 ========
 
 [![Build Status](https://travis-ci.org/ryanpdwyer/brownian.svg?branch=master)](https://travis-ci.org/ryanpdwyer/brownian)
+[![Documentation Status](https://readthedocs.org/projects/brownian/badge/?version=latest)](https://readthedocs.org/projects/brownian/?badge=latest)
 
 The package `brownian` fits scanned probe microscopy cantilever Brownian motion data, which allows us to calculate the resonance frequency, spring constant and quality factor of the cantilever, along with the noise floor of the detector.
 
