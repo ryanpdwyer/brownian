@@ -1,5 +1,24 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
+
+from mock import MagicMock
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+            return Mock()
+
+MOCK_MODULES = [
+    'matplotlib',
+    'matplotlib.pypplot',
+    'numpy',
+    'scipy',
+    'scipy.stats',
+    'scipy.curve_fit',
+    'h5py']
+
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # Import our package; this is the standard way to use Sphinx
 
@@ -7,8 +26,6 @@ import brownian
 
 # Copied from jam99@cornell.edu following advice at
 # http://stackoverflow.com/q/5599254
-
-
 def skip(app, what, name, obj, skip, options):
     if name in ["__repr__", "__init__"]:
         return False

@@ -10,6 +10,8 @@
 Makefile
 brownian/ex/
 docs/_build/
+build/
+dist/
 **.sublime-project
 **.sublime-workspace
 **.egg-info

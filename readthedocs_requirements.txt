@@ -1,0 +1,5 @@
+Pint
+mock
+-e git+git@github.com:ryanpdwyer/brownian.git
+nose
+uncertainties
