@@ -2,6 +2,8 @@
 # Enables the package to be used in develop mode
 # See http://pythonhosted.org/setuptools/setuptools.html#development-mode
 # See https://github.com/scikit-learn/scikit-learn/issues/1016
+import os
+
 try:
     import setuptools
 except ImportError:
