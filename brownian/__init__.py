@@ -209,7 +209,7 @@ class BrownianMotionFitter(object):
 
         mpl.rcParams.update(self.rcParams)
         import matplotlib.pyplot as plt
-        fig, ax = plt.subfigures()
+        fig, ax = plt.subplots()
         ax.semilogy(f, self.fit_PSD_raw, f, self.PSD_fit_raw)
         ax.set_xlim(self.f_min, self.f_max)
         ax.set_xlabel('Frequency [Hz]')
