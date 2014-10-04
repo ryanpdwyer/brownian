@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Noise Fitting Brownian Motion Data
 
@@ -26,8 +27,9 @@ import os
 import errno
 
 import numpy as np
-import scipy as sp
+import scipy
 import scipy.stats
+sp = scipy
 from scipy.optimize import curve_fit
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -205,6 +207,8 @@ class BrownianMotionFitter(object):
         f = self.fit_f
         plt.semilogy(f, self.fit_PSD_raw, f, self.PSD_fit_raw)
         plt.xlim(self.f_min, self.f_max)
+        plt.xlabel('Frequency [Hz]')
+        plt.ylabel(u'PSD [nm²/Hz]')
         plt.show()
 
     def plot_residuals(self):
