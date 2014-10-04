@@ -226,16 +226,23 @@ class BrownianMotionFitter(object):
     def plot_residuals(self):
         """Plot the residuals of the calculated fit."""
 
+        mpl.rcParams.update(self.rcParams)
         import matplotlib.pyplot as plt
 
         plt.plot(self.fit_f, self.residuals)
         plt.show()
 
     def plot_reduced_residuals(self):
+        mpl.rcParams.update(self.rcParams)
+        import matplotlib.pyplot as plt
+
         plt.plot(self.fit_f, self.reduced_residuals)
         plt.show()
 
     def plot_cdf(self):
+        mpl.rcParams.update(self.rcParams)
+        import matplotlib.pyplot as plt
+
         x = self.reduced_residuals_sorted
         size = x.size
         y = np.arange(1, 1 + size) / size
