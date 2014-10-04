@@ -215,6 +215,8 @@ class BrownianMotionFitter(object):
         ax.set_xlabel('Frequency [Hz]')
         ax.set_ylabel(u'PSD [nm²/Hz]')
         fig.gca()
+        fig.canvas.draw()
+        fig.tight_layout(pad=0.25)
 
         if filename is not None:
             fig.savefig(filename)
