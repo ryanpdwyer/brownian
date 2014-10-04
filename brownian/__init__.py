@@ -32,7 +32,6 @@ import scipy.stats
 sp = scipy
 from scipy.optimize import curve_fit
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 # Backend should be set correctly here.
 from uncertainties import correlated_values, ufloat
 import h5py
@@ -70,6 +69,8 @@ class BrownianMotionFitter(object):
         self.PSD_ci_raw = PSD_ci
         self.T = T * u.K
         self.est_cant = est_cant
+
+        self.rcParams = {}
 
     def _guess_P_detector(self):
         """Guess a low, but reasonable number for the detector noise floor.
@@ -202,17 +203,29 @@ class BrownianMotionFitter(object):
     Detector Noise: {self.P_detector:~P}
             """.format(self=self))
 
-    def plot_fit(self):
+    def plot_fit(self, filename=None):
         """Plot the calculated fit."""
         f = self.fit_f
-        plt.semilogy(f, self.fit_PSD_raw, f, self.PSD_fit_raw)
-        plt.xlim(self.f_min, self.f_max)
-        plt.xlabel('Frequency [Hz]')
-        plt.ylabel(u'PSD [nm²/Hz]')
-        plt.show()
+
+        mpl.rcParams.update(self.rcParams)
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subfigures()
+        ax.semilogy(f, self.fit_PSD_raw, f, self.PSD_fit_raw)
+        ax.set_xlim(self.f_min, self.f_max)
+        ax.set_xlabel('Frequency [Hz]')
+        ax.set_ylabel(u'PSD [nm²/Hz]')
+        fig.gca()
+
+        if filename is not None:
+            fig.savefig(filename)
+
+        self.fit_fig, self.fit_ax = fig, ax
 
     def plot_residuals(self):
         """Plot the residuals of the calculated fit."""
+
+        import matplotlib.pyplot as plt
+
         plt.plot(self.fit_f, self.residuals)
         plt.show()
 
