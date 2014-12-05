@@ -12,6 +12,7 @@ brownian/ex/
 docs/_build/
 build/
 dist/
+src/
 **.sublime-project
 **.sublime-workspace
 **.egg-info
