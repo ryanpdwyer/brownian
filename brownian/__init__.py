@@ -195,13 +195,33 @@ class BrownianMotionFitter(object):
         self._fit_residuals()
         self.f_c, self.k_c, self.Q, self.P_detector = f_c, k_c, Q, P_detector
 
+    def report(self):
+        return u"""
+    Input
+    -----------------------------------------------
+    Temperature           T: {self.T:~P}
+
+    Estimates
+    -----------------------------------------------
+    Spring constant     k_c: {self.est_cant.k_c:~P}
+    Resonance frequency f_c: {self.est_cant.f_c:10~P}
+    Quality factor        Q: {self.est_cant.Q.magnitude:.0f}
+    
+    Fitting
+    -----------------------------------------------
+    Fit frequency min f_min: {f_min:~P}
+    Fit frequency max f_max: {f_max:~P}
+
+    Results
+    -----------------------------------------------
+    Resonance frequency f_c: {self.f_c:~P}
+    Spring constant     k_c: {self.k_c:~P}
+    Quality Factor        Q: {self.Q.magnitude}
+    Detector Noise         : {self.P_detector:~P}
+            """.format(self=self, f_min=self.f_min*u.Hz, f_max=self.f_max*u.Hz)
+    
     def print_output(self):
-        print(u"""
-    Resonence frequency f_c: {self.f_c:~P}
-    Spring constant k_c: {self.k_c:~P}
-    Quality Factor Q: {self.Q:~P}
-    Detector Noise: {self.P_detector:~P}
-            """.format(self=self))
+        print(self.report())
 
     def plot_fit(self, filename=None):
         """Plot the calculated fit."""
