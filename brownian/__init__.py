@@ -199,25 +199,25 @@ class BrownianMotionFitter(object):
         return u"""
     Input
     -----------------------------------------------
-    Temperature           T: {self.T:~P}
+    Temperature           T: {self.T:P}
 
     Estimates
     -----------------------------------------------
-    Spring constant     k_c: {self.est_cant.k_c:~P}
-    Resonance frequency f_c: {self.est_cant.f_c:10~P}
-    Quality factor        Q: {self.est_cant.Q.magnitude:.0f}
+    Spring constant     k_c: {self.est_cant.k_c:P}
+    Resonance frequency f_c: {self.est_cant.f_c:P}
+    Quality factor        Q: {self.est_cant.Q:P}
     
     Fitting
     -----------------------------------------------
-    Fit frequency min f_min: {f_min:~P}
-    Fit frequency max f_max: {f_max:~P}
+    Fit frequency min f_min: {f_min:P}
+    Fit frequency max f_max: {f_max:P}
 
     Results
     -----------------------------------------------
-    Resonance frequency f_c: {self.f_c:~P}
-    Spring constant     k_c: {self.k_c:~P}
-    Quality Factor        Q: {self.Q.magnitude}
-    Detector Noise         : {self.P_detector:~P}
+    Resonance frequency f_c: {self.f_c:.1uSP}
+    Spring constant     k_c: {self.k_c:.1uSP}
+    Quality Factor        Q: {self.Q:.1uSP}
+    Detector Noise         : {self.P_detector:.1uSP}
             """.format(self=self, f_min=self.f_min*u.Hz, f_max=self.f_max*u.Hz)
     
     def print_output(self):
@@ -325,7 +325,12 @@ def translate_fit_parameters(popt, pcov, P_detector0_raw, T=300*u.K):
     punits = [u.nm**2 / u.Hz, u.Hz, u.dimensionless, u.nm**2 / u.Hz]
     scales = [P_detector0_raw, 1, 1, P_detector0_raw]
 
-    P_x0, f_c, Q, P_detector = [np.abs(uncert_val * unit * scale) for
+    def create_measurement(uncert_val, unit, scale):
+        return (uncert_val.n * unit).plus_minus(uncert_val.s) * scale
+
+    P_x0, f_c, Q, P_detector = [np.abs(
+                                    create_measurement(uncert_val, unit, scale)
+                                ) for
                                 uncert_val, unit, scale in
                                 zip(pvals, punits, scales)]
 
@@ -333,7 +338,7 @@ def translate_fit_parameters(popt, pcov, P_detector0_raw, T=300*u.K):
     return f_c, k_c, Q, P_detector
 
 
-def calc_k_c(f_c, Q, P_x0, T=ufloat(300, 1)*u.K):
+def calc_k_c(f_c, Q, P_x0, T=(300, 1)*u.K):
     """Calculate the spring constant, returning a pint quantity containing
     a value with uncertainty, if uncertainty is used on the input (ufloat)."""
     return ((2 * k_B * T) / (np.pi * f_c * Q * P_x0)).to(u.N / u.m)
