@@ -522,3 +522,7 @@ def silentremove(filename):
     except OSError as e:  # this would be "except OSError, e:" before Python 2.6
         if e.errno != errno.ENOENT:  # errno.ENOENT = no such file or directory
             raise  # re-raise exception if a different error occured
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
