@@ -3,13 +3,7 @@
 # See http://pythonhosted.org/setuptools/setuptools.html#development-mode
 # See https://github.com/scikit-learn/scikit-learn/issues/1016
 import os
-
-try:
-    import setuptools
-except ImportError:
-    pass
-
-from distutils.core import setup
+from setuptools import setup
 
 def get_packages(package):
     """
@@ -31,5 +25,11 @@ setup(name='brownian',
       packages=get_packages('brownian'),
       install_requires=[
       'numpy', 'scipy', 'matplotlib', 'pint',
-      'nose', 'h5py', 'uncertainties'
-      ])
+      'nose', 'h5py', 'uncertainties', 'click', 'BeautifulSoup4',
+      ],
+      include_package_data=True,
+      entry_points="""
+        [console_scripts]
+        calck=brownian._calck:cli
+      """,
+      )
