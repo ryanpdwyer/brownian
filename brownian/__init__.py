@@ -219,10 +219,39 @@ class BrownianMotionFitter(object):
     Quality Factor        Q: {self.Q:.1uSP}
     Detector Noise         : {self.P_detector:.1uSP}
             """.format(self=self, f_min=self.f_min*u.Hz, f_max=self.f_max*u.Hz)
+
+    def rst_report(self):
+        return u"""
+Report::
+
+    Input
+    -----------------------------------------------
+    Temperature           T: {self.T:P}
+
+    Estimates
+    -----------------------------------------------
+    Spring constant     k_c: {self.est_cant.k_c:P}
+    Resonance frequency f_c: {self.est_cant.f_c:P}
+    Quality factor        Q: {self.est_cant.Q:P}
     
+    Fitting
+    -----------------------------------------------
+    Fit frequency min f_min: {f_min:P}
+    Fit frequency max f_max: {f_max:P}
+
+    Results
+    -----------------------------------------------
+    Resonance frequency f_c: {self.f_c:.1uSP}
+    Spring constant     k_c: {self.k_c:.1uSP}
+    Quality Factor        Q: {self.Q:.1uSP}
+    Detector Noise         : {self.P_detector:.1uSP}
+            """.format(self=self, f_min=self.f_min*u.Hz, f_max=self.f_max*u.Hz)
+
     def print_output(self):
         print(self.report())
 
+# These plotting functions could use a refactor
+# Lots of duplicated code, logic fairly separate from the rest of the class
     def plot_fit(self, filename=None):
         """Plot the calculated fit."""
         f = self.fit_f
@@ -230,10 +259,13 @@ class BrownianMotionFitter(object):
         mpl.rcParams.update(self.rcParams)
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
+        
         ax.semilogy(f, self.fit_PSD_raw, f, self.PSD_fit_raw)
+        
         ax.set_xlim(self.f_min, self.f_max)
         ax.set_xlabel('Frequency [Hz]')
         ax.set_ylabel(u'PSD [nm²/Hz]')
+        
         fig.gca()
         fig.canvas.draw()
         fig.tight_layout(pad=0.25)
@@ -242,37 +274,80 @@ class BrownianMotionFitter(object):
             fig.savefig(filename)
 
         self.fit_fig, self.fit_ax = fig, ax
+        return fig, ax
 
-    def plot_residuals(self):
+    def plot_residuals(self, filename=None):
         """Plot the residuals of the calculated fit."""
 
         mpl.rcParams.update(self.rcParams)
         import matplotlib.pyplot as plt
+        
+        fig, ax = plt.subplots()
+        
+        ax.plot(self.fit_f, self.residuals)
+        
+        ax.set_xlabel('Frequency [Hz]')
+        ax.set_ylabel(u'Residual [nm²/Hz]')
+        
+        fig.gca()
+        fig.canvas.draw()
+        fig.tight_layout(pad=0.25)
 
-        plt.plot(self.fit_f, self.residuals)
-        plt.show()
+        if filename is not None:
+            fig.savefig(filename)
+        return fig, ax
 
-    def plot_reduced_residuals(self):
+
+    def plot_reduced_residuals(self, filename=None):
         mpl.rcParams.update(self.rcParams)
         import matplotlib.pyplot as plt
 
-        plt.plot(self.fit_f, self.reduced_residuals)
-        plt.show()
+        fig, ax = plt.subplots()
 
-    def plot_cdf(self):
-        mpl.rcParams.update(self.rcParams)
-        import matplotlib.pyplot as plt
+        ax.plot(self.fit_f, self.reduced_residuals)
 
+        ax.set_xlabel('Frequency [Hz]')
+        ax.set_ylabel('Normalized Residual')
+
+        fig.gca()
+        fig.canvas.draw()
+        fig.tight_layout(pad=0.25)
+
+        if filename is not None:
+            fig.savefig(filename)
+        return fig, ax
+
+    def plot_cdf(self, filename=None):
         x = self.reduced_residuals_sorted
         size = x.size
         y = np.arange(1, 1 + size) / size
         popt = self.p_residuals
-        plt.plot(x, y, 'bo', x, cdf(x, *popt), 'g-')
+
+        mpl.rcParams.update(self.rcParams)
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots()
+
+        ax.plot(x, y, 'bo', x, cdf(x, *popt), 'g-')
+        ax.set_xlabel("Reduced Residual")
+        ax.set_ylabel("CDF")
+
+        fig.gca()
+        fig.canvas.draw()
+        fig.tight_layout(pad=0.25)
+
+        if filename is not None:
+            fig.savefig(filename)
+        return fig, ax
+
 
     def _fit_residuals(self):
         self.p_residuals = fit_residuals(self.reduced_residuals_sorted)
-        print("""The residuals have mean {self.p_residuals[0]:.2e}
-and standard deviation {self.p_residuals[1]:.2e}""".format(self=self))
+        print("""
+Residuals
+-------------------------------------
+        Mean: {self.p_residuals[0]:.2e}
+   Std. dev.: {self.p_residuals[1]:.2e}""".format(self=self))
 
 
 def Pf(f, P_x0, f_c, Q, P_detector):
@@ -378,18 +453,21 @@ def get_data(filename):
 
     The HDF file should have the following structure:
 
-    f
+    x
         A table containing the frequencies of each point in the power
         spectrum.
 
-    PSD
+    y
         Contains power spectra PSD_0(f) through PSD_(n-1)(f), arranged
             as follows, with each power spectrum occupying 1 column. 
         PSD_0(0 Hz) PSD_1(O Hz)
         PSD_0(1 Hz) PSD_1(1 Hz) ...
 
+    y_std
+        Contains standard deviations for the data points in y
 
-    See http://h5labview.sourceforge.net and http://pytables.github.io for
+
+    See http://h5labview.sourceforge.net and http://www.h5py.org for
     more information."""
     with h5py.File(filename, 'r') as fh:
         # Put some checks about old-style files here.
