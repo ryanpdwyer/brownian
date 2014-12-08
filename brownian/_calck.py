@@ -125,7 +125,7 @@ def cli(filename, f_min, f_max, output,
     # classes)
     # The report generator should also be its own function.
     if resonance_frequency is None:
-        resonance_frequency = (f_high + f_low) / 2.0
+        resonance_frequency = (f_min + f_max) / 2.0
 
 
     file_path = os.path.abspath(filename)
