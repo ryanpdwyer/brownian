@@ -196,7 +196,7 @@ Report
 
 .. image:: {files.reduced_residuals}
 
-.. image:: {files.fit}
+.. image:: {files.cdf}
 
 Reproduce this analysis with the following shell command:
 
