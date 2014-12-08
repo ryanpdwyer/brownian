@@ -33,7 +33,8 @@ setup(name='brownian',
       packages=get_packages('brownian'),
       install_requires=[
       'numpy', 'scipy', 'matplotlib', 'pint',
-      'nose', 'h5py', 'uncertainties', 'click', 'BeautifulSoup4', 'docutils'
+      'nose', 'h5py', 'uncertainties', 'click', 'BeautifulSoup4', 'docutils',
+      'bunch',
       ],
       include_package_data=True,
       entry_points="""
