@@ -290,7 +290,7 @@ from distutils.core import Command
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build import build as _build
 
-__version__ = '0.1.8'
+__version__ = '0.1.10'
 
 # these configuration settings will be overridden by setup.py after it
 # imports us
@@ -404,7 +404,7 @@ def versions_from_parentdir(parentdir_prefix, root, verbose=False):
             print("guessing rootdir is '%%s', but '%%s' doesn't start with prefix '%%s'" %%
                   (root, dirname, parentdir_prefix))
         return None
-    return {"version": dirname[len(parentdir_prefix):].replace("_2", "+").strip(".egg"), "full": ""}
+    return {"version": dirname[len(parentdir_prefix):].replace("_", "+").strip(".egg"), "full": ""}
 
 def git_get_keywords(versionfile_abs):
     # the code embedded in _version.py can just fetch the value of these
@@ -517,7 +517,7 @@ def get_versions(default={"version": "unknown", "full": ""}, verbose=False):
         # versionfile_source is the relative path from the top of the source
         # tree (where the .git directory might live) to this file. Invert
         # this to find the root from __file__.
-        for i in range(len(versionfile_source.split(os.sep))):
+        for i in range(len(versionfile_source.split('/'))):
             root = os.path.dirname(root)
     except NameError:
         return default
@@ -946,6 +946,7 @@ class cmd_update_files(Command):
         # .gitattributes to mark _version.py for export-time keyword
         # substitution.
         do_vcs_install(manifest_in, versionfile_source, ipy)
+
 
 def get_cmdclass():
     cmds = {'version': cmd_version,

@@ -36,6 +36,7 @@ setup(name='brownian',
       'nose', 'h5py', 'uncertainties', 'click', 'BeautifulSoup4', 'docutils',
       'bunch',
       ],
+      license = 'MIT',
       include_package_data=True,
       entry_points="""
         [console_scripts]
