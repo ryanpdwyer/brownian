@@ -36,6 +36,8 @@ setup(name='brownian',
       'nose', 'h5py', 'uncertainties', 'click', 'BeautifulSoup4', 'docutils',
       'bunch',
       ],
+      tests_require=['nose'],
+      test_suite='nose.collector',
       license = 'MIT',
       include_package_data=True,
       entry_points="""
