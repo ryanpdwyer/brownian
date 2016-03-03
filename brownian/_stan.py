@@ -5,6 +5,7 @@ import io
 
 import datetime
 import copy
+import platform
 import pystan
 import matplotlib.pyplot as plt
 from scipy.stats import norm
@@ -25,6 +26,8 @@ from six import string_types
 from pystan.misc import _array_to_table
 from brownian._calck import img2uri
 from pystan.external.pymc import plots
+
+windows = 'Windows' == platform.system()
 
 directory = os.path.split(__file__)[0]
 model_code_dict_fname = os.path.join(directory, 'stan_model_code.pkl')
@@ -343,48 +346,6 @@ def fh2data(fh, fmin, fmax, kc, Q, Pdet=None, T=298,
      }
 
 
-def fh2data_all(fh, fmin, fmax, fc, kc, Q, Pdet=None, T=298,
-            sigma_fc=5, sigma_kc=5, sigma_Q=10000, sigma_Pdet=1e-6,
-            sigma_k=10):
-    f_all = fh['f_subset'][:]
-    m = (f_all > fmin) & (f_all < fmax)
-    f = f_all[m]
-    psd = fh['PSD_subset'][:][:, m]
-
-    M, N = psd.shape
-    
-    # Scale data
-    psd_scale = psd.mean()
-    psd_scaled = psd / psd_scale
-    
-    
-    
-    
-    if Pdet is None:
-        mu_Pdet = np.percentile(psd_scaled, 25)
-    else:
-        mu_Pdet = Pdet / psd_scale
-        
-    
-    return {'fmin': fmin,
-     'fmax': fmax,
-     'N': N,
-     'y': psd_scaled,
-     'f': f,
-     'scale': psd_scale,
-     'mu_fc': fc,
-     'mu_kc': kc,
-     'mu_Q': Q,
-     'mu_Pdet': mu_Pdet,  # scaled
-     'sigma_fc': sigma_fc,
-     'sigma_kc': sigma_kc,
-     'sigma_Q': sigma_Q,
-     'sigma_Pdet': sigma_Pdet / psd_scale,
-     'sigma_k': sigma_k,
-     'T': T,
-     'M': M
-     }
-
 
 def initial(d, k0=0.6, Pdet=None):
     if Pdet is None:
@@ -565,14 +526,17 @@ class BayesianBrownian(object):
             self.priors = priors
 
     def sample(self, chains=4, iter=2000, priors=None, init='random',
-               **priors_kwargs):
+               **kwargs):
         if priors is not None:
             self.priors = priors
-        self.priors.update(priors_kwargs)
         updated_data = copy.copy(self.data)
         updated_data.update(self.priors)
+        # See http://pystan.readthedocs.org/en/latest/windows.html#windows
+        # Must specify njobs=1 on windows
+        if windows:
+            kwargs['njobs'] = 1
         self.out = self.sm.sampling(data=updated_data, chains=chains, iter=iter,
-                                    init=init)
+                                    init=init, **kwargs)
         self.samp = self.out.extract()
         return self.out
 
