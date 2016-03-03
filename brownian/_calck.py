@@ -46,7 +46,7 @@ def img2uri(html_text):
     """Convert any relative reference img tags in html_input to inline data uri.
     Return the transformed html, in utf-8 format."""
 
-    soup = bs4.BeautifulSoup(html_text)
+    soup = bs4.BeautifulSoup(html_text, "lxml")
 
     image_tags = soup.find_all('img')
 

@@ -43,6 +43,7 @@ setup(name='brownian',
       entry_points="""
         [console_scripts]
         calck=brownian._calck:cli
+        bayesk=brownian._stan:bayesian_brownian_cli
       """,
       cmdclass=versioneer.get_cmdclass(),
       )
