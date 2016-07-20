@@ -35,9 +35,58 @@ import matplotlib as mpl
 # Backend should be set correctly here.
 from uncertainties import correlated_values, ufloat
 import h5py
-from jittermodel.base import u, Cantilever
+import pint
+
+u = pint.UnitRegistry()
 
 k_B = u.boltzmann_constant
+
+
+class Cantilever(object):
+    """Implement a simple unit cantilever, and require all inputs."""
+
+    k_B = k_B
+
+    def __init__(self, f_c, k_c, Q):
+        """Initialize the cantilever."""
+        self.f_c = f_c
+        self.k_c = k_c
+        self.Q = Q
+
+    # Properties of the cantilver
+    @property
+    def omega_c(self):
+        """Return the angular resonance frequency of the cantilever."""
+        return self.f_c * 2 * pi
+
+    @property
+    def Gamma_i(self):
+        """Return the cantilever's intrinsic dissipation."""
+        return (self.k_c / (self.omega_c * self.Q))
+
+    def F_min(self, T, bandwidth=1*u.Hz):
+        """Return the thermally limited minimum detectable
+        force (pN).
+
+        The optional bandwidth parameter allows determining
+        a miniumun force over a broader or narrower bandwidth
+        than 1 Hz."""
+        return ((4 * self.k_B * self.Gamma_i * T * bandwidth) ** 0.5)
+
+    # Representations of the cantilever
+    def __str__(self):
+        """Write out the cantilever as its most important parameters:
+        resonance frequency, spring constant, quality factor and
+        intrinsic friction."""
+        return "f_c = {self.f_c}, k_c = {self.k_c}, Q = {self.Q}\
+Gamma_i = {self.Gamma_i}".format(self=self)
+
+    def __repr__(self):
+        """Return a representation of the cantilever. Rounds the cantilever
+        to 9 digits, so eval(repr(cantilever)) is not necessarily equal to
+        cantilever."""
+        return "Cantilever(f_c = {self.f_c}, k_c = {self.k_c}, \
+Q = {self.Q})".format(self=self)
 
 
 class BrownianMotionFitter(object):
