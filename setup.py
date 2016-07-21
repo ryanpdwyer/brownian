@@ -34,7 +34,7 @@ setup(name='brownian',
       install_requires=[
       'numpy', 'scipy', 'matplotlib', 'pint',
       'nose', 'h5py', 'uncertainties', 'click', 'BeautifulSoup4', 'docutils',
-      'bunch',
+      'bunch', 'six'
       ],
       tests_require=['nose'],
       test_suite='nose.collector',

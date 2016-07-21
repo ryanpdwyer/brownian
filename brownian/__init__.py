@@ -29,6 +29,7 @@ import errno
 import numpy as np
 import scipy
 import scipy.stats
+import six
 sp = scipy
 from scipy.optimize import curve_fit
 import matplotlib as mpl
@@ -496,7 +497,7 @@ def avg_ci_data(data, axis=0):
     return data_avg, data_ci
 
 
-def get_data(filename):
+def get_data(filename_or_fh):
     """Extract power spectrum data from an HDF5 file.
     Return f, PSD_mean, PSD_conf_int.
 
@@ -518,11 +519,19 @@ def get_data(filename):
 
     See http://h5labview.sourceforge.net and http://www.h5py.org for
     more information."""
-    with h5py.File(filename, 'r') as fh:
-        # Put some checks about old-style files here.
-        f = fh['x'].value
-        PSD_mean = fh['y'].value
-        PSD_ci = fh['y_std'].value * 1.96 / fh['y'].attrs['n_avg']**0.5
+    is_filename = isinstance(filename_or_fh, six.string_types)
+    if is_filename:
+        fh = h5py.File(filename_or_fh, 'r')
+    else:
+        fh = filename_or_fh
+
+    # Put some checks about old-style files here.
+    f = fh['x'].value
+    PSD_mean = fh['y'].value
+    PSD_ci = fh['y_std'].value * 1.96 / fh['y'].attrs['n_avg']**0.5
+
+    if is_filename:
+        fh.close()
 
     return f, PSD_mean, PSD_ci
 
