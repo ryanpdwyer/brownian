@@ -17,6 +17,8 @@ import pandas as pd
 import seaborn as sns
 from collections import OrderedDict
 import h5py
+import pymc3 as pm
+import pymc3.stats as pmstats
 from brownian import u, calc_P_x0, Pf
 sns.set_style("white")
 from matplotlib.offsetbox import AnchoredText
@@ -31,6 +33,15 @@ windows = 'Windows' == platform.system()
 
 directory = os.path.split(__file__)[0]
 model_code_dict_fname = os.path.join(directory, 'stan_model_code.pkl')
+
+def gamma_mustd(mu, std):
+    """Define the Gamma distribution in terms of its mean ``mu`` and standard deviation ``std``,
+    rather than shape ``k``, and scale ``theta`.
+    
+    See https://en.wikipedia.org/wiki/Gamma_distribution"""
+    k = (mu/std)**2
+    theta = std**2/mu
+    return stats.gamma(a=k, scale=theta)
 
 def prnDict(aDict, br='\n', html=0,
             keyAlign='l',   sortKey=0,
@@ -416,6 +427,19 @@ def prior_func_gamma(xname, data, x):
         # Nothing to plot for logposterior
         return None
 
+def prior_func_pymc(xname, data, x):
+    if xname == 'dfc':
+        return norm.pdf(x, scale=data['sigma_fc'])
+    elif xname == 'kc':
+        return gamma_mustd(mu=data['mu_kc'], std=data['sigma_kc']).pdf(x)
+    elif xname == 'Q':
+        return gamma_mustd(mu=data['mu_Q'], std=data['sigma_Q']).pdf(x)
+    elif xname == 'Pdet':
+        return gamma_mustd(mu=data['mu_Pdet'], std=data['sigma_Pdet']).pdf(x)
+    else:
+        # Nothing to plot for logposterior
+        return None
+
 def range_from_pts(pts, percentile=1, pad=1.25):
     xmax = np.percentile(pts, 100-percentile)
     xmin = np.percentile(pts, percentile)
@@ -596,6 +620,33 @@ class BayesianBrownian(object):
         else:
             save(gr_or_fname, self.model_name, self.model_code, self.out,
                  compress=compress)
+
+
+def sample_pymc3(d, samples=2000, njobs=2):
+    with pm.Model() as model:
+        dfc = pm.Normal(mu=0.0, sd=d['sigma_fc'], name='dfc')
+        Q = pm.Gamma(mu=d['mu_Q'], sd=d['sigma_Q'], name='Q')
+        Pdet = pm.Gamma(mu=d['mu_Pdet'], sd=d['sigma_Pdet'], name='Pdet')
+        kc = pm.Gamma(mu=d['mu_kc'], sd=d['sigma_kc'], name='kc')
+
+        M = d['M']
+        T = d['T']
+        scale=d['scale']
+        mu_fc = d['mu_fc']
+        f = d['f']
+
+
+        like = pm.Gamma(alpha=M, beta=(M/(((2 * 1.381e-5 * T) / (np.pi * Q * kc)) / scale * (dfc + mu_fc)**3 /
+                    ((f * f - (dfc + mu_fc)**2) * (f * f - (dfc + mu_fc)**2) + f * f * (dfc + mu_fc)**2 / Q**2)
+                    + Pdet)),
+                            observed=d['y'],
+                            name='like')
+
+        start = pm.find_MAP()
+        step = pm.NUTS(state=start)
+        
+        trace = pm.sample(samples, step=step, start=start, progressbar=True, njobs=njobs)
+    return trace
 
 
 class PlotBayesianBrownian(object):
@@ -800,6 +851,243 @@ Pair Plots
             except:
                 pass
 
+class PlotPyMCBrownian(object):
+    def __init__(self, d, traces, name):
+
+        self.data = d
+        self.traces = traces
+        self.name = name
+        
+        self.samples = OrderedDict()
+
+        varnames = [var for var in traces.varnames if '_log_' not in var]
+        for var in varnames:
+            self.samples[var] = traces[var]
+
+        self.y = self.data['y'] * self.data['scale']
+
+        self.f = self.data['f']
+
+
+        self.y_samp = eval_samples(Pf_func_gamma, self.f,
+                                   self.samples, self.data)
+
+        self.y_percent = lambda p: np.percentile(self.y_samp, p, axis=0)
+
+        self.y_mean = np.mean(self.y_samp, axis=0)
+
+        self.reduced_residuals = (self.y - self.y_mean) / self.y_mean
+
+    def plot(self, fname=None, bbox_inches='tight', **kwargs):
+        f = self.f
+
+        Pdet = self.samples['Pdet'].mean() * self.data['scale']
+
+        fig, ax = plt.subplots()
+        ax.semilogy(self.f, self.y, color='b')
+        ax.semilogy(self.f, self.y_mean, color='g')
+        ax.semilogy(self.f, Pdet + np.zeros_like(self.f), 'g--')
+        ax.semilogy(self.f, self.y_mean - Pdet, 'g--')
+        ax.set_xlabel("Frequency [Hz]")
+        ax.set_ylabel(u"PSD [nm²/Hz]")
+        if fname is not None:
+            fig.tight_layout()
+            fig.savefig(fname, bbox_inches=bbox_inches, **kwargs)
+
+        return fig, ax
+
+    def plot_traces(self, fname=None, bbox_inches='tight', **kwargs):
+        # Should plot the MCMC traces.
+        axes = pm.traceplot(self.traces)
+        fig = axes[0, 0].get_figure()
+        if fname is not None:
+            fig.tight_layout()
+            fig.savefig(fname, bbox_inches=bbox_inches, **kwargs)
+
+        return fig, axes
+
+
+    def plot_zoomed(self, zoom=10, fname=None, bbox_inches='tight', **kwargs):
+        f = self.f
+
+        Delta_f  = (self.data['mu_fc'] / self.samples['Q'].mean()) * zoom
+        mu_f = self.data['mu_fc'] + self.samples['dfc'].mean()
+        m = (f >= (mu_f - Delta_f)) & (f <= (mu_f + Delta_f))
+
+        fig, ax = plt.subplots()
+        ax.semilogy(self.f[m], self.y[m], color='b')
+        ax.semilogy(self.f[m], self.y_mean[m], color='g')
+        ax.fill_between(self.f[m], self.y_percent(2.5)[m],
+                        self.y_percent(97.5)[m], color='g', alpha=0.5)
+        ax.set_xlim(mu_f - Delta_f, mu_f + Delta_f)
+        ax.set_xlabel("Frequency [Hz]")
+        ax.set_ylabel(u"PSD [nm²/Hz]")
+        if fname is not None:
+            fig.tight_layout()
+            fig.savefig(fname, bbox_inches=bbox_inches, **kwargs)
+
+        return fig, ax
+
+    def plot_residuals(self, Hz_fraction=15, fname=None, bbox_inches='tight',
+                        **kwargs):
+        f_total = np.max(self.f) - np.min(self.f)
+        frac = min(Hz_fraction / f_total, 1)
+        self.residuals_lowess = lowess(self.reduced_residuals,
+                                       self.f,
+                                       frac=frac,
+                                       return_sorted=False)
+        
+        fig, ax = plt.subplots()
+        ax.plot(self.f, self.reduced_residuals, 'b.', alpha=0.5)
+        ax.plot(self.f, self.residuals_lowess, 'g-', linewidth=2)
+        ax.set_xlabel("Frequency [Hz]")
+        ax.set_ylabel("Reduced Residual")
+        if fname is not None:
+            fig.tight_layout()
+            fig.savefig(fname, bbox_inches=bbox_inches, **kwargs)
+
+
+
+    def plot_pairs(self, fname=None, bbox_inches='tight', **kwargs):
+        fig, axes = plot_all_traces(self.samples, data=self.data,
+                               prior_func=prior_func_pymc)
+
+        if fname is not None:
+            fig.tight_layout()
+            fig.savefig(fname, bbox_inches=bbox_inches, **kwargs)
+
+        return fig, axes
+
+
+
+    def summary(self, start=0, ndigits=4):
+        trace = self.traces
+        roundto = ndigits
+        batches=100
+        alpha=0.05
+
+        varnames = [name for name in trace.varnames if not name.endswith('_')]
+
+        stat_summ = pmstats._StatSummary(roundto, batches, alpha)
+        pq_summ = pmstats._PosteriorQuantileSummary(roundto, alpha)
+        summ = []
+        for var in varnames:
+            # Extract sampled values
+            sample = trace.get_values(var, burn=start, combine=True)
+
+            summ.append('\n%s:\n\n' % var)
+
+            summ.append(stat_summ.output(sample))
+            summ.append(pq_summ.output(sample))
+
+        return '\n'.join(summ)
+
+
+
+    def report(self, outfile=None, outdir=None, clean=True):
+        if outfile is None:
+            outfile = self.name
+
+        basename = os.path.splitext(outfile)[0]
+
+        if outdir is not None and not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+        if outdir is None:
+            outdir=''
+
+        html_fname = os.path.join(outdir, basename+'.html')
+
+        fit_fname = os.path.join(outdir, basename+'-fit.png')
+        fit_zoomed_fname = os.path.join(outdir, basename+'-fit_zoomed.png')
+        residuals_fname = os.path.join(outdir, basename+'-resid.png')
+        pairs_fname = os.path.join(outdir, basename+'-pairs.png')
+        traces_fname = os.path.join(outdir, basename+'-traces.png')
+
+
+        self.plot(fname=fit_fname)
+        self.plot_zoomed(fname=fit_zoomed_fname)
+        self.plot_residuals(fname=residuals_fname)
+        self.plot_pairs(fname=pairs_fname)
+        self.plot_traces(fname=traces_fname)
+
+        indented_summary_str = ['    '+line for 
+                                line in self.summary().split('\n')]
+
+
+
+        body = """\
+======================
+Brownian motion report
+======================
+
+Summary
+=======
+
+::
+
+    {summary}
+
+::
+
+    fc [Hz]: {fc:.2f}
+    Pdet [nm²/Hz]: {Pdet:.2e}
+
+
+Fit
+---
+
+.. image:: {fit_fname}
+
+Fit zoomed
+----------
+
+.. image:: {fit_zoomed_fname}
+
+
+Residuals
+---------
+
+.. image:: {residuals_fname}
+
+
+Pair Plots
+----------
+
+.. image:: {pairs_fname}
+
+Trace Plot
+----------
+
+.. image:: {traces_fname}
+
+
+""".format(summary='\n'.join(indented_summary_str),
+           Pdet=self.samples['Pdet'].mean()*self.data['scale'],
+           fc=self.samples['dfc'].mean()+self.data['mu_fc'],
+           fit_fname=fit_fname,
+           fit_zoomed_fname=fit_zoomed_fname,
+           residuals_fname=residuals_fname,
+           pairs_fname=pairs_fname,
+           traces_fname=traces_fname)
+
+        
+        image_dependent_html = docutils.core.publish_string(body, writer_name='html')
+        self_contained_html = unicode(img2uri(image_dependent_html), 'utf8')
+
+        with io.open(html_fname, 'w', encoding='utf8') as f:
+            f.write(self_contained_html)
+
+        if clean:
+            for fname in [fit_fname, fit_zoomed_fname, 
+                          residuals_fname, pairs_fname, traces_fname]:
+            
+                try:
+                    os.remove(fname)
+                except:
+                    pass
+
+
 
 # This looks pretty good. Let's add information on fh (dataset, etc),
 # and write a cli script.
@@ -856,4 +1144,58 @@ def bayesian_brownian_cli(filename, fmin, fmax, output, spring_constant,
     if output is None:
         output = os.path.splitext(filename)[0]+'.html'
     pbb.report(output)
+
+
+@click.command(help="""\
+Fit brownian motion data using Bayesian MCMC, using data from an HDF5 file.
+
+Arguments:
+
+\b
+FILENAME            HDF5 datafile
+FMIN                Min frequency to fit [Hz]
+FMAX                Max frequency to fit [Hz]
+""")
+@click.argument('filename', type=click.Path(exists=True))
+@click.argument('fmin', type=float)
+@click.argument('fmax', type=float)
+@click.option('--output', '-o', type=str, default=None)
+@click.option('--temperature', '-T', default=298., help='Temperature (298) [K]')
+@click.option('--spring-constant', '-k', default=3.5, help='Spring constant prior mean (3.5 N/m)')
+@click.option('--quality-factor', '-Q', default=20000., help='Quality factor prior mean (20000)')
+@click.option('--spring-constant-stdev', '-sk', default=5., help='Spring constant prior standard deviation (5 N/m)')
+@click.option('--quality-factor-stdev', '-sQ', default=20000., help='Quality factor prior standard deviation (20000)')
+@click.option('--resonance-frequency-stdev', '-sf', default=5., help='Resonance frequency prior standard deviation')
+@click.option('--detector-noise', '-P', default=None, help='Detector noise prior mean (None, est. from data)')
+@click.option('--detector-noise-stdev', '-sP', default=None, help='Detector noise prior standard deviation (None, est. from data)')
+@click.option('--chains', '-c', default=2, help="MCMC chains to run (2)")
+@click.option('--iterations', '-i', default=2000, help='MCMC iterations per chain (2000)')
+@click.option('--clean/--no-clean', default=True, help='Clean intermediate png files.')
+def pymc_brownian_cli(filename, fmin, fmax, output, spring_constant,
+                          quality_factor, temperature, spring_constant_stdev,
+                          quality_factor_stdev, resonance_frequency_stdev,
+                          detector_noise, detector_noise_stdev,
+                          chains, iterations, clean):
+    kc = spring_constant
+    Q = quality_factor
+    T = temperature
+    sigma_kc = spring_constant_stdev
+    sigma_Q = quality_factor_stdev
+    sigma_fc = resonance_frequency_stdev
+    Pdet = detector_noise
+    sigma_Pdet = detector_noise_stdev
+    fh = h5py.File(filename, 'r')
+    data = fh2data(fh, fmin, fmax, kc, Q, sigma_Q=sigma_Q, T=T, sigma_kc=sigma_kc,
+                   sigma_fc=sigma_fc, mu_Pdet=Pdet, sigma_Pdet=sigma_Pdet)
+
+    traces = sample_pymc3(data, iterations, chains)
+
+    name = os.path.splitext(filename)[0]
+
+    pbb = PlotPyMCBrownian(data, traces, name)
+
+    if output is None:
+        output = os.path.splitext(filename)[0]+'.html'
+
+    pbb.report(output, clean=clean)
 
