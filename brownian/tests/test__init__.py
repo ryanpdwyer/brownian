@@ -136,23 +136,25 @@ def test_get_data():
                        [5,    6,   6,   4]])
 
     # Create the test HDF5 file
-    with h5py.File('test.h5', 'w') as fh:
+    with h5py.File('test.h5', 'w', driver='core', backing_store=False) as fh:
         fh['x'] = ex_f
         fh['y'] = ex_PSD.mean(axis=1)
         fh['y'].attrs['n_avg'] = ex_PSD.shape[1]
         # Need ddof=1 to get sample standard deviation, rather than population.
         fh['y_std'] = ex_PSD.std(axis=1, ddof=1)
 
-    ex_mean = np.array([1.2, 2.55, 3.9125, 5.2, 5.25])
-    ex_ci = np.array([0.080016664930917122, 0.16974097914175013,
-                      0.083683431255336824, 0.43090292797024871,
-                      0.93827856560121137])
+        ex_mean = np.array([1.2, 2.55, 3.9125, 5.2, 5.25])
+        ex_ci = np.array([0.080016664930917122, 0.16974097914175013,
+                          0.083683431255336824, 0.43090292797024871,
+                          0.93827856560121137])
 
-    f, psd_mean, psd_ci = get_data('test.h5')
+        f, psd_mean, psd_ci = get_data(fh)
 
     assert np.allclose(ex_f, f)
     assert np.allclose(ex_mean, psd_mean)
     assert np.allclose(ex_ci, psd_ci)
+
+
 
 
 @unittest.skip("Currently support for the old data format is broken.")
