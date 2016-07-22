@@ -531,7 +531,7 @@ def pymc_brownian_cli(filename, fmin, fmax, output, spring_constant,
     sigma_Pdet = detector_noise_stdev
     fh = h5py.File(filename, 'r')
     data = fh2data(fh, fmin, fmax, kc, Q, sigma_Q=sigma_Q, T=T, sigma_kc=sigma_kc,
-                   sigma_fc=sigma_fc, mu_Pdet=Pdet, sigma_Pdet=sigma_Pdet)
+                   sigma_fc=sigma_fc, Pdet=Pdet, sigma_Pdet=sigma_Pdet)
 
     traces = sample_pymc3(data, iterations, chains)
 
