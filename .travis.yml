@@ -22,14 +22,15 @@ before_install:
   - conda info -a
 # Install packages
 install:
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib scipy h5py Cython patsy joblib
   - conda install -n test-environment pip
-  - conda install -n test-environment atlas mkl numpy scipy matplotlib h5py nose beautiful-soup docutils pystan seaborn statsmodels theano
+  - conda install -n test-environment nose beautiful-soup docutils seaborn statsmodels
   - source activate test-environment
-  - conda install --channel https://conda.anaconda.org/fklab theano pymc3
   - pip install pint uncertainties click bunch
+  - pip install git+https://github.com/Theano/Theano.git
+  - pip install git+https://github.com/pymc-devs/pymc3.git
   - python setup.py install
  
 # Run test
 script:
-  - nosetests
+  - THEANO_FLAGS='gcc.cxxflags="-march=core2"' nosetests
