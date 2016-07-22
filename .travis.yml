@@ -33,4 +33,6 @@ install:
  
 # Run test
 script:
+# See https://github.com/pymc-devs/pymc3/commit/8f4ca56142cda23930e9161608013182a4996892
+# https://github.com/Theano/Theano/issues/3780
   - THEANO_FLAGS='gcc.cxxflags="-march=core2"' nosetests
