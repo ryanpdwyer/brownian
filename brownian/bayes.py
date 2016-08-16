@@ -135,6 +135,71 @@ def fh2data(fh, fmin, fmax, kc, Q, Pdet=None, T=298,
      }
 
 
+def np2data(freq, PSD, N_averages, fmin, fmax, kc, Q, Pdet=None, T=298,
+            sigma_fc=5, sigma_kc=5, sigma_Q=10000, sigma_Pdet=None):
+    """
+    Create input dictionary for bayesian curve fitting of power spectral density
+    brownian motion data. Parameters explained below. Those labeled '(prior)'
+    set the prior for the bayesian fitting.
+
+    freq: Array of frequency data [Hz]
+    PSD: Mean power spectral density data from N_averages
+    N_averages: Number of averages
+    fmin: Minimum frequency to fit [Hz]
+    fmax: Maximum frequency to fit [Hz]
+    kc: Estimated cantilever spring constant [N/m] (prior)
+    Q: Estimated cantilever Q (prior)
+    Pdet: Estimated detector noise floor. Estimated if not provided. (prior)
+    T: Temperature [K] 
+    sigma_fc: Standard deviation in estimated cantilever frequency (prior)
+    sigma_Q: Standard deviation in estimated quality factor (prior)
+    sigma_Pdet: Standard deviation in estimated detector noise [nm^2/Hz]. Estimated if not provided. (prior)
+    """
+    m = (freq > fmin) & (freq < fmax)
+    f = freq[m]
+    psd = PSD[m]
+
+    M = int(round(N_averages)) # Force to integer
+    N = f.size
+    
+    fc = f[np.argmax(psd)]
+
+    # Scale data
+    psd_scale = psd.mean()
+    psd_scaled = psd / psd_scale
+    
+    if Pdet is None:
+        mu_Pdet = np.percentile(psd_scaled, 25)
+    else:
+        mu_Pdet = Pdet / psd_scale
+
+
+    if sigma_Pdet is None:
+        sigma_Pdet = 5 * mu_Pdet
+    else:
+        sigma_Pdet = sigma_Pdet / psd_scale
+        
+    
+    return {'fmin': fmin,
+     'fmax': fmax,
+     'N': N,
+     'M': M,       
+     'y': psd_scaled,
+     'f': f,
+     'scale': psd_scale,
+     'mu_fc': fc,
+     'mu_kc': kc,
+     'mu_Q': Q,
+     'mu_Pdet': mu_Pdet,  # scaled
+     'sigma_fc': sigma_fc,
+     'sigma_kc': sigma_kc,
+     'sigma_Q': sigma_Q,
+     'sigma_Pdet': sigma_Pdet,
+     'T': T,
+     }
+
+
+
 def prior_func_pymc(xname, data, x):
     if xname == 'dfc':
         return norm.pdf(x, scale=data['sigma_fc'])
