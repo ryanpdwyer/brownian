@@ -6,7 +6,14 @@ import os
 from setuptools import setup
 
 # See https://github.com/warner/python-versioneer
-import versioneer
+import imp
+fp, pathname, description = imp.find_module('versioneer')
+try:
+    versioneer = imp.load_module('versioneer', fp, pathname, description)
+finally:
+    if fp: fp.close()
+
+
 versioneer.VCS = 'git'
 versioneer.versionfile_source = 'brownian/_version.py'
 versioneer.versionfile_build = 'brownian/_version.py'

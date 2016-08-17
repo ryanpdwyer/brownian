@@ -1,2 +1,3 @@
+include *.rst
 include versioneer.py
 include brownian/_version.py

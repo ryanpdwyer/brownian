@@ -9,6 +9,7 @@
 **.jpg
 **.pkl
 Makefile
+MANIFEST
 brownian/ex/
 docs/_build/
 build/
