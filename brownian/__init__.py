@@ -38,6 +38,8 @@ from uncertainties import correlated_values, ufloat
 import h5py
 import pint
 
+directory = os.path.split(__file__)[0]
+
 u = pint.UnitRegistry()
 
 k_B = u.boltzmann_constant
