@@ -12,6 +12,7 @@ environment:
 
 install:
     # Install miniconda using a powershell script.
+    - "systeminfo"
     - "powershell ./.install-miniconda.ps1"
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
 
