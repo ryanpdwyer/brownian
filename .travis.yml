@@ -1,4 +1,8 @@
 # Config file for automatic testing at travis-ci.org
+os:
+  - linux
+  - osx
+
 language: python
 
 python:
@@ -35,4 +39,4 @@ install:
 script:
 # See https://github.com/pymc-devs/pymc3/commit/8f4ca56142cda23930e9161608013182a4996892
 # https://github.com/Theano/Theano/issues/3780
-  - THEANO_FLAGS='gcc.cxxflags="-march=core2"' nosetests
+  - THEANO_FLAGS='gcc.cxxflags="-march=core2"' nosetests -sv

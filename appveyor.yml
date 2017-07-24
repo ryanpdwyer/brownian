@@ -1,0 +1,40 @@
+# AppVeyor.com is a Continuous Integration service to build and run tests under
+# Windows
+
+environment:
+
+  global:
+      PYTHON: "C:\\conda"
+      MINICONDA_VERSION: "3.5.5"
+
+  matrix:
+      - PYTHON_VERSION: "2.7"
+        NUMPY_VERSION: "1.9.1"
+
+platform:
+    -x64
+
+install:
+    # Install miniconda using a powershell script.
+    - "powershell ./.install-miniconda.ps1"
+    - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+
+    # Install the build and runtime dependencies of the project.
+    - "conda update --yes conda"
+    # Create a conda environment using the astropy bonus packages
+    - "conda create -q --yes -n test python=%PYTHON_VERSION% pip nose"
+    - "activate test"
+
+    # Check that we have the expected version of Python
+    - "python --version"
+
+    # Install specified version of numpy and dependencies
+    - "conda install -q --yes numpy=%NUMPY_VERSION% scipy matplotlib hdf5 h5py pandas seaborn pymc3"
+    - "pip list"
+    - "python setup.py install"
+
+# Not a .NET project, we build in the install step instead
+build: false
+
+test_script:
+  - "nosetests -sv"
