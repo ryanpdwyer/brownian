@@ -51,6 +51,7 @@ setup(name='brownian',
         [console_scripts]
         calck=brownian._calck:cli
         bayesk=brownian.bayes:pymc_brownian_cli
+        stan_calck=brownian.bayes:cmdstan_brownian_cli
       """,
       cmdclass=versioneer.get_cmdclass(),
       )

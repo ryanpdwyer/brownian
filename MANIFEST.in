@@ -7,3 +7,4 @@ include brownian/stanmodels/gamma.osx
 include brownian/stanmodels/gamma2.exe
 include brownian/stanmodels/gamma2.linux
 include brownian/stanmodels/gamma2.osx
+include brownian/ex/brownian-red.h5
