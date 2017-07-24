@@ -9,7 +9,6 @@ environment:
 
   matrix:
       - PYTHON_VERSION: "2.7"
-        NUMPY_VERSION: "1.9.1"
 
 platform:
     -x64
@@ -29,7 +28,7 @@ install:
     - "python --version"
 
     # Install specified version of numpy and dependencies
-    - "conda install -q --yes numpy=%NUMPY_VERSION% scipy matplotlib hdf5 h5py pandas seaborn pymc3"
+    - "conda install -q --yes numpy scipy matplotlib hdf5 h5py pandas seaborn pymc3"
     - "pip list"
     - "python setup.py install"
 
