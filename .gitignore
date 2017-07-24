@@ -8,9 +8,13 @@
 **.jpeg
 **.jpg
 **.pkl
-Makefile
 MANIFEST
-brownian/ex/
+brownian/stanmodels/gamma.exe
+brownian/stanmodels/gamma.linux
+brownian/stanmodels/gamma.osx
+brownian/stanmodels/gamma2.exe
+brownian/stanmodels/gamma2.linux
+brownian/stanmodels/gamma2.osx
 docs/_build/
 build/
 dist/

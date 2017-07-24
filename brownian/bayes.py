@@ -19,12 +19,30 @@ import h5py
 import pymc3 as pm
 import pymc3.stats as pmstats
 from brownian import u, calc_P_x0, Pf
+from brownian._rdump import dump_to_rdata
 sns.set_style("white")
 from matplotlib.offsetbox import AnchoredText
 from six.moves import cPickle as pickle
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from six import string_types
 from brownian._calck import img2uri
+import subprocess
+import psutil
+from cStringIO import StringIO
+import pandas as pd
+from kpfm.util import txt_filename
+
+# print("Platform information:\n\n{}".format(platform.platform()))
+uname = platform.uname()
+system_name = uname[0]
+if system_name == "Windows":
+    script_extension = "exe"
+elif system_name == "Darwin":
+    script_extension = "osx"
+elif system_name == "Linux":
+    script_extension = "linux"
+else:
+    raise UserWarning("Cannot use cmdstan compiled programs on this system.")
 
 windows = 'Windows' == platform.system()
 
@@ -549,12 +567,172 @@ Trace Plot
                     pass
 
 
-# This looks pretty good. Let's add information on fh (dataset, etc),
-# and write a cli script.
+
+def highlight_alternating(s, color='#D3D3D3'):
+    '''
+    highlight the maximum in a Series or DataFrame
+    '''
+    attr = 'background-color: {}'.format(color)
+
+    is_max = 1 == (np.arange(len(s.index)) % 2)
+    return pd.Series(np.where(is_max, attr, ''),
+                            index=s.index)
+
 
 # Note: Full workup should be a simple combination of,
 # 1. Fitting
 # 2. Plot / fit report
+
+class PlotCmdStanBrownian(PlotPyMCBrownian):
+    def __init__(self, d, traces, name):
+        self.data = d
+        self.traces = traces
+        self.name = name
+        
+        self.samples = OrderedDict()
+
+        for var in ['dfc', 'kc', 'Q', 'Pdet']:
+            self.samples[var] = traces[var]
+
+        self.y = self.data['y'] * self.data['scale']
+
+        self.f = self.data['f']
+
+
+        self.y_samp = eval_samples(Pf_func_gamma, self.f,
+                                   self.samples, self.data)
+
+        self.y_percent = lambda p: np.percentile(self.y_samp, p, axis=0)
+
+        self.y_mean = np.mean(self.y_samp, axis=0)
+
+        self.reduced_residuals = (self.y - self.y_mean) / self.y_mean
+
+    def plot_pairs(self, fname=None, bbox_inches='tight', **kwargs):
+        fig, axes = plot_all_traces(self.samples, data=self.data,
+                               prior_func=prior_func_pymc)
+
+        if fname is not None:
+            fig.tight_layout()
+            fig.savefig(fname, bbox_inches=bbox_inches, **kwargs)
+
+        return fig, axes
+
+    # def plot_traces(self, fname=None, bbox_inches='tight', **kwargs):
+    #     # Should plot the MCMC traces.
+    #     axes = pm.traceplot(self.traces)
+    #     fig = axes[0, 0].get_figure()
+    #     if fname is not None:
+    #         fig.tight_layout()
+    #         fig.savefig(fname, bbox_inches=bbox_inches, **kwargs)
+
+    #     return fig, axes
+
+    def report(self, outfile=None, outdir=None, clean=True):
+        if outfile is None:
+            outfile = self.name
+
+        basename = os.path.splitext(outfile)[0]
+
+        if outdir is not None and not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+        if outdir is None:
+            outdir=''
+
+        html_fname = os.path.join(outdir, basename+'.html')
+
+        fit_fname = os.path.join(outdir, basename+'-fit.png')
+        fit_zoomed_fname = os.path.join(outdir, basename+'-fit_zoomed.png')
+        residuals_fname = os.path.join(outdir, basename+'-resid.png')
+        pairs_fname = os.path.join(outdir, basename+'-pairs.png')
+        traces_fname = os.path.join(outdir, basename+'-traces.png')
+
+        self.plot(fname=fit_fname)
+        self.plot_zoomed(fname=fit_zoomed_fname)
+        self.plot_residuals(fname=residuals_fname)
+        self.plot_pairs(fname=pairs_fname)
+        # self.plot_traces(fname=traces_fname)
+
+        self.traces['fc'] = self.traces['dfc'] + self.data['mu_fc']
+        self.traces['Gamma'] = self.traces['kc'] / (2*np.pi*self.traces['fc']*self.traces['Q'])
+        self.traces['Pdet_nm'] = self.traces['Pdet']  * self.data['scale']
+
+        traces = self.traces[['fc', 'kc', 'Q', 'Pdet_nm', 'Gamma', 'lp__', 'accept_stat__', 'stepsize__', 'treedepth__',
+       'n_leapfrog__', 'divergent__', 'energy__', 'dfc', 'Pdet']]
+
+        describe = traces.describe()
+        text = describe.style.apply(highlight_alternating, axis=0).render()
+        lines = ["    "+line for line in text.splitlines()]
+        summary_txt = "\n".join(lines)
+
+        body = """\
+======================
+Brownian motion report
+======================
+
+Summary
+=======
+
+ .. raw:: html
+
+ {summary}
+
+::
+
+    fc [Hz]: {fc:.2f}
+    Pdet [nm²/Hz]: {Pdet:.2e}
+
+
+Fit
+---
+
+.. image:: {fit_fname}
+
+Fit zoomed
+----------
+
+.. image:: {fit_zoomed_fname}
+
+
+Residuals
+---------
+
+.. image:: {residuals_fname}
+
+
+Pair Plots
+----------
+
+.. image:: {pairs_fname}
+
+
+""".format(summary=summary_txt,
+           Pdet=self.samples['Pdet'].mean()*self.data['scale'],
+           fc=self.samples['dfc'].mean()+self.data['mu_fc'],
+           fit_fname=fit_fname,
+           fit_zoomed_fname=fit_zoomed_fname,
+           residuals_fname=residuals_fname,
+           pairs_fname=pairs_fname)
+
+        
+        image_dependent_html = docutils.core.publish_string(body, writer_name='html')
+        self_contained_html = unicode(img2uri(image_dependent_html), 'utf8')
+
+        with io.open(html_fname, 'w', encoding='utf8') as f:
+            f.write(self_contained_html)
+
+        if clean:
+            for fname in [fit_fname, fit_zoomed_fname, 
+                          residuals_fname, pairs_fname, traces_fname]:
+            
+                try:
+                    os.remove(fname)
+                except:
+                    pass
+
+
+
 
 @click.command(help="""\
 Fit brownian motion data using Bayesian MCMC, using data from an HDF5 file.
@@ -608,4 +786,125 @@ def pymc_brownian_cli(filename, fmin, fmax, output, spring_constant,
         output = os.path.splitext(filename)[0]+'.html'
 
     pbb.report(output, clean=clean)
+
+
+@txt_filename
+def split_header_data(fh):
+    comments = []
+    data = []
+    for line in fh:
+        if line.startswith('#'):
+            comments.append(line)
+        else:
+            data.append(line)
+
+    return (data, comments)
+
+def cmdstan_sample(data, iterations, chains, warmup=None,
+                   model=directory+'/stanmodels/gamma'+'.'+script_extension,
+                   modelname='gamma', datafile='data.dump'):
+    with open(datafile, 'w') as f:
+        dump_to_rdata(f, **data)
+
+    if warmup is None:
+        warmup = iterations
+
+    processes = [subprocess.Popen([model, 'sample', 'num_samples={}'.format(iterations),
+                      'num_warmup={}'.format(warmup),
+                      'data', 'file={}'.format(datafile),
+                      'id={}'.format(i),
+                      'output',
+                      'file={}-{}.csv'.format(modelname, i)])
+                for i in xrange(1, chains+1)]
+
+    ls = [psutil.Process(p.pid) for p in processes]
+
+    gone, alive = psutil.wait_procs(ls, timeout=1000)
+
+    filenames = ['{}-{}.csv'.format(modelname, i)
+                for i in xrange(1, chains+1)]
+
+    files = [open(filename, 'r') for filename in filenames]
+
+    for i, fh in enumerate(files):
+        data, comments = split_header_data(fh)
+        data_io = StringIO("".join(data))
+        df = pd.read_csv(data_io)
+        if i == 0:
+            df_full = df
+        else:
+            df_full = df_full.append(df, ignore_index=True)
+
+    return df_full
+
+
+
+
+
+@click.command(help="""\
+Fit brownian motion data using Bayesian MCMC, using data from an HDF5 file.
+
+Arguments:
+
+\b
+FILENAME            HDF5 datafile
+FMIN                Min frequency to fit [Hz]
+FMAX                Max frequency to fit [Hz]
+""")
+@click.argument('filename', type=click.Path(exists=True))
+@click.argument('fmin', type=float)
+@click.argument('fmax', type=float)
+@click.option('--output', '-o', type=str, default=None)
+@click.option('--temperature', '-T', default=298., help='Temperature (298) [K]')
+@click.option('--spring-constant', '-k', default=3.5, help='Spring constant prior mean (3.5 N/m)')
+@click.option('--quality-factor', '-Q', default=20000., help='Quality factor prior mean (20000)')
+@click.option('--spring-constant-stdev', '-sk', default=5., help='Spring constant prior standard deviation (5 N/m)')
+@click.option('--quality-factor-stdev', '-sQ', default=20000., help='Quality factor prior standard deviation (20000)')
+@click.option('--resonance-frequency-stdev', '-sf', default=5., help='Resonance frequency prior standard deviation')
+@click.option('--detector-noise', '-P', default=None, help='Detector noise prior mean (None, est. from data)')
+@click.option('--detector-noise-stdev', '-sP', default=None, help='Detector noise prior standard deviation (None, est. from data)')
+@click.option('--chains', '-c', default=2, help="MCMC chains to run (2)")
+@click.option('--iterations', '-i', default=2000, help='MCMC iterations per chain (2000)')
+@click.option('--clean/--no-clean', default=True, help='Clean intermediate png files.')
+def cmdstan_brownian_cli(filename, fmin, fmax, output, spring_constant,
+                          quality_factor, temperature, spring_constant_stdev,
+                          quality_factor_stdev, resonance_frequency_stdev,
+                          detector_noise, detector_noise_stdev,
+                          chains, iterations, clean):
+    kc = spring_constant
+    Q = quality_factor
+    T = temperature
+    sigma_kc = spring_constant_stdev
+    sigma_Q = quality_factor_stdev
+    sigma_fc = resonance_frequency_stdev
+    Pdet = detector_noise
+    sigma_Pdet = detector_noise_stdev
+    fh = h5py.File(filename, 'r')
+    data = fh2data(fh, fmin, fmax, kc, Q, sigma_Q=sigma_Q, T=T, sigma_kc=sigma_kc,
+                   sigma_fc=sigma_fc, Pdet=Pdet, sigma_Pdet=sigma_Pdet)
+
+    # To switch to cmdstan, I need to:
+    # Translate data to a rdata.dump file
+    # Run subprocess command to sample
+    # Collect data from .csv
+    # Merge chains if necessary
+    # 
+
+    # To switch to cmdstan, I need to:
+    # Translate data to a rdata.dump file
+    # Run subprocess command to sample
+    # Collect data from .csv
+    # Merge chains if necessary
+    # 
+    traces = cmdstan_sample(data, iterations, chains)
+
+    name = os.path.splitext(filename)[0]
+
+    pbb = PlotCmdStanBrownian(data, traces, name)
+
+    if output is None:
+        output = os.path.splitext(filename)[0]+'.html'
+
+    pbb.report(output, clean=clean)
+
 

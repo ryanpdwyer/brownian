@@ -1,3 +1,9 @@
 include *.rst
 include versioneer.py
 include brownian/_version.py
+include brownian/stanmodels/gamma.exe
+include brownian/stanmodels/gamma.linux
+include brownian/stanmodels/gamma.osx
+include brownian/stanmodels/gamma2.exe
+include brownian/stanmodels/gamma2.linux
+include brownian/stanmodels/gamma2.osx
