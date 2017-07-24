@@ -16,8 +16,12 @@ import pandas as pd
 import seaborn as sns
 from collections import OrderedDict
 import h5py
-import pymc3 as pm
-import pymc3.stats as pmstats
+# pymc3 is not necessary. Don't raise an error if it is not installed.
+try:
+    import pymc3 as pm
+    import pymc3.stats as pmstats
+except:
+    pass
 from brownian import u, calc_P_x0, Pf
 from brownian._rdump import dump_to_rdata
 sns.set_style("white")
