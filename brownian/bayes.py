@@ -264,7 +264,7 @@ def plot_all_traces(samp, data=None, prior_func=None):
                 ax.add_artist(namey)
                 ax.add_artist(namex)
             else:
-                sns.kdeplot(x, ax=ax)
+                sns.kdeplot(x, ax=ax, legend=False)
                 if prior_func is not None and data is not None:
                     line = ax.get_lines()[0]
                     xdata = line.get_xdata()
@@ -273,7 +273,7 @@ def plot_all_traces(samp, data=None, prior_func=None):
                         ax.plot(xdata, ydata)
                 ax.set_yticklabels([''])
                 ax.set_xticklabels([''])
-                name = AnchoredText(xname,2,  frameon=False)
+                name = AnchoredText(xname, 2, frameon=False)
                 ax.add_artist(name)
 
             if j == 0:
@@ -568,7 +568,7 @@ Trace Plot
 
 
 
-def highlight_alternating(s, color='#D3D3D3'):
+def highlight_alternating(s, color='#EDEDED'):
     '''
     highlight the maximum in a Series or DataFrame
     '''
@@ -661,7 +661,7 @@ class PlotCmdStanBrownian(PlotPyMCBrownian):
         traces = self.traces[['fc', 'kc', 'Q', 'Pdet_nm', 'Gamma', 'lp__', 'accept_stat__', 'stepsize__', 'treedepth__',
        'n_leapfrog__', 'divergent__', 'energy__', 'dfc', 'Pdet']]
 
-        describe = traces.describe()
+        describe = traces.describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
         text = describe.style.apply(highlight_alternating, axis=0).render()
         lines = ["    "+line for line in text.splitlines()]
         summary_txt = "\n".join(lines)
