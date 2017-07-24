@@ -44,7 +44,7 @@ setup(name='brownian',
       'bunch', 'six', 'psutil', 'kpfm'
       ],
       tests_require=['nose'],
-      test_suite='nose.collector',
+      test_suite='brownian.tests.discover',
       license = 'MIT',
       include_package_data=True,
       entry_points="""

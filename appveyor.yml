@@ -31,7 +31,7 @@ install:
     - "conda install -q --yes numpy scipy matplotlib hdf5 h5py pandas seaborn statsmodels"
     - "pip list"
     - "pip install kpfm tqdm"
-    - "python getdata.py"
+    - "python getmodels.py"
     - "python setup.py install"
 
 
