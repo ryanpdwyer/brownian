@@ -26,7 +26,7 @@ before_install:
   - conda info -a
 # Install packages
 install:
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib scipy h5py Cython patsy joblib
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib scipy h5py Cython patsy joblib mkl-service
   - conda install -n test-environment pip
   - conda install -n test-environment nose beautiful-soup docutils seaborn statsmodels psutil
   - source activate test-environment
