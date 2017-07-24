@@ -28,7 +28,7 @@ install:
     - "python --version"
 
     # Install specified version of numpy and dependencies
-    - "conda install -q --yes numpy scipy matplotlib hdf5 h5py pandas seaborn pymc3"
+    - "conda install -q --yes numpy scipy matplotlib hdf5 h5py pandas seaborn"
     - "pip list"
     - "python setup.py install"
 
