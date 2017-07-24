@@ -10,9 +10,6 @@ environment:
   matrix:
       - PYTHON_VERSION: "2.7"
 
-platform:
-    -x64
-
 install:
     # Install miniconda using a powershell script.
     - "powershell ./.install-miniconda.ps1"
