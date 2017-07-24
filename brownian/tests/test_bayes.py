@@ -14,7 +14,7 @@ from brownian import silentremove, directory
 class testACmdStan(unittest.TestCase):
     def setUp(self):
         self.startTime = time.time()
-        self.fh = h5py.File(directory+'/ex/brownian173033.h5', 'r')
+        self.fh = h5py.File(directory+'/ex/brownian-red.h5', 'r')
 
     def test_integration_cmd_stan(self):
         f = self.fh['x'][:]
@@ -38,7 +38,7 @@ class testACmdStan(unittest.TestCase):
 class testBayes(unittest.TestCase):
     def setUp(self):
         self.startTime = time.time()
-        self.fh = h5py.File(directory+'/ex/brownian173033.h5', 'r')
+        self.fh = h5py.File(directory+'/ex/brownian-red.h5', 'r')
     def test_integration(self):
         """Integration test: data extraction, sampling, and creation of plotting object."""
         d = bayes.fh2data(self.fh, 70521, 70601, 3.5, 20000,
