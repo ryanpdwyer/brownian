@@ -30,7 +30,7 @@ install:
   - conda install -n test-environment pip
   - conda install -n test-environment nose beautiful-soup docutils seaborn statsmodels psutil
   - source activate test-environment
-  - pip install pint uncertainties click bunch tqdm kpfm
+  - pip install pint uncertainties click bunch tqdm kpfm requests
   - pip install git+https://github.com/Theano/Theano.git
   - pip install git+https://github.com/pymc-devs/pymc3.git
   - python getmodels.py
