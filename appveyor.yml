@@ -30,8 +30,10 @@ install:
     # Install specified version of numpy and dependencies
     - "conda install -q --yes numpy scipy matplotlib hdf5 h5py pandas seaborn statsmodels"
     - "pip list"
-    - "pip install kpfm"
+    - "pip install kpfm tqdm"
+    - "python getdata.py"
     - "python setup.py install"
+
 
 # Not a .NET project, we build in the install step instead
 build: false

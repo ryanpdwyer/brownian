@@ -33,6 +33,7 @@ install:
   - pip install pint uncertainties click bunch tqdm kpfm
   - pip install git+https://github.com/Theano/Theano.git
   - pip install git+https://github.com/pymc-devs/pymc3.git
+  - python getdata.py
   - python setup.py install
  
 # Run test
