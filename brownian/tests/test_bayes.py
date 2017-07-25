@@ -10,7 +10,6 @@ from brownian import silentremove, directory
 
 
 
-
 class testACmdStan(unittest.TestCase):
     def setUp(self):
         self.startTime = time.time()
@@ -44,6 +43,7 @@ class testBayes(unittest.TestCase):
         d = bayes.fh2data(self.fh, 70521, 70601, 3.5, 20000,
               sigma_Q=15000, Pdet=1e-8,
               sigma_Pdet=3e-8, sigma_kc=2.5)
+        self.skipIf(bayes.windows, "Skipping on windows")
         traces = bayes.sample_pymc3(d, samples=10, njobs=1)
         ppb = bayes.PlotPyMCBrownian(d, traces, 'test-data')
 
