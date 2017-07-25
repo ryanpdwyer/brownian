@@ -21,7 +21,7 @@ try:
     import pymc3 as pm
     import pymc3.stats as pmstats
 except:
-    pass
+    print("Unable to import pymc3")
 from brownian import u, calc_P_x0, Pf
 from brownian._rdump import dump_to_rdata
 sns.set_style("white")

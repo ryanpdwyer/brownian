@@ -20,9 +20,9 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # TODO: Get rid of dependence on .h5 file; this data can be programatically
 #       generated.
 with h5py.File('../ex/brownian-red.h5', 'r') as data:
-    f = data['f'].value
-    PSDx = data['PSDx'].value
-    PSD_wgt = data['PSDw'].value
+    f = data['x'].value
+    PSDx = data['y'].value
+    PSD_wgt = data['y'].value / 32**0.5
 
 est_cant = Cantilever(f_c=63700*u.Hz, k_c=3.5*u.N/u.m,
                       Q=20000*u.dimensionless)
@@ -49,7 +49,7 @@ class testBrownianMotionFitter_init(unittest.TestCase):
 
 ex_scaled_PSD = np.load('scale_data_PSD.npy')
 
-
+@unittest.skip("This datafile is unavailabe in installed code.")
 class testBrownianMotionFitter_fitting(unittest.TestCase):
     def setUp(self):
         self.bmf = BrownianMotionFitter(f, PSDx, PSD_wgt, T, est_cant)
