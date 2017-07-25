@@ -53,9 +53,9 @@ setup(name='brownian',
       'nose', 'h5py', 'uncertainties', 'click', 'BeautifulSoup4', 'docutils',
       'bunch', 'six', 'psutil', 'kpfm'
       ],
-      package_data=['brownian': ['stanmodels/gamma{}'.format(script_extension),
+      package_data={'brownian': ['stanmodels/gamma{}'.format(script_extension),
                                   'stanmodels/gamma2{}'.format(script_extension),
-                                  'ex/brownian-red.h5']
+                                  'ex/brownian-red.h5']},
       tests_require=['nose'],
       test_suite='brownian.tests.discover',
       license = 'MIT',
