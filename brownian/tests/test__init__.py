@@ -19,7 +19,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # Load some test data from an hdf5 file.
 # TODO: Get rid of dependence on .h5 file; this data can be programatically
 #       generated.
-with h5py.File('data.h5', 'r') as data:
+with h5py.File('../ex/brownian-red.h5', 'r') as data:
     f = data['f'].value
     PSDx = data['PSDx'].value
     PSD_wgt = data['PSDw'].value
