@@ -35,7 +35,7 @@ class testACmdStan(unittest.TestCase):
         print("%s: %.3f" % (self.id(), t))
 
 class testBayes(unittest.TestCase):
-    @unittest.skipIf(bayes.windows, "Skipping on windows")
+    @unittest.skip("Skipping pymc3: cmdstan seems to work well")
     def setUp(self):
         self.startTime = time.time()
         self.fh = h5py.File(directory+'/ex/brownian-red.h5', 'r')
