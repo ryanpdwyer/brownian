@@ -46,7 +46,6 @@ setup(name='brownian',
       tests_require=['nose'],
       test_suite='brownian.tests.discover',
       license = 'MIT',
-      include_package_data=True,
       entry_points="""
         [console_scripts]
         calck=brownian._calck:cli
