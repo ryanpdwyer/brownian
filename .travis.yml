@@ -1,9 +1,15 @@
 # Config file for automatic testing at travis-ci.org
-os:
-  - linux
-  - osx
-
 language: python
+
+matrix:
+    include:
+        - os: linux
+          python: 2.7
+          env: PY_VERSION=2.7
+        - os: osx
+          language: generic
+          env: PY_VERSION=2.7
+          
 
 
 # Anaconda information comes from https://gist.github.com/dan-blanchard/7045057
@@ -24,7 +30,7 @@ before_install:
   - conda info -a
 # Install packages
 install:
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib scipy h5py Cython patsy joblib mkl-service
+  - conda create -q -n test-environment python=$PY_VERSION numpy scipy matplotlib scipy h5py Cython patsy joblib mkl-service
   - conda install -n test-environment pip
   - conda install -n test-environment nose beautiful-soup docutils seaborn statsmodels psutil
   - source activate test-environment
